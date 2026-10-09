@@ -1,0 +1,308 @@
+<title>Rahul's Command</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="styles.css">
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-pie" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3v9h9A9 9 0 1 1 12 3z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z" fill="currentColor"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-dots" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></symbol>
+  <symbol id="i-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+  <symbol id="i-usd" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5v19M16.5 7c-.8-1.5-2.4-2.2-4.5-2.2-2.6 0-4.3 1.3-4.3 3.2 0 2 1.7 2.8 4.3 3.4 2.7.6 4.5 1.5 4.5 3.6 0 2-1.9 3.3-4.6 3.3-2.3 0-4-.9-4.9-2.5"/></symbol>
+  <symbol id="i-panel" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9.5 4v16"/></symbol>
+  <symbol id="i-pen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z"/></symbol>
+  <symbol id="i-cart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2.2l2.3 11h10.8l2-8H6.6"/><circle cx="9.5" cy="19.5" r="1.4"/><circle cx="17" cy="19.5" r="1.4"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="i-bug" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="10" height="13" rx="5"/><path d="M9 7a3 3 0 0 1 6 0M4 12h3M17 12h3M5 18l2.5-1.5M19 18l-2.5-1.5M5 6l2.5 2M19 6l-2.5 2"/></symbol>
+  <symbol id="i-film" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M10 9.5v5l4.5-2.5z" fill="currentColor"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6"/></symbol>
+  <symbol id="i-plane" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M10.5 13.5 3 11l1.5-1.5 7.5 1L16.5 6c1-1 2.5-1.5 3-1s0 2-1 3L14 12.5l1 7.5L13.5 21 11 13.5"/></symbol>
+</svg>
+
+<div class="app">
+  <aside class="side" aria-label="Main">
+    <div class="side-top"><button class="icon-btn side-toggle" type="button" data-sidetoggle="1" aria-label="Close sidebar"><svg><use href="#i-panel"/></svg></button></div>
+    <span class="nav-ind" id="nav-ind"></span>
+    <button class="nav-btn" data-go="home"><svg><use href="#i-home"/></svg>Home<span class="count" data-count="home" hidden></span></button>
+    <button class="nav-btn" data-go="clients"><svg><use href="#i-folder"/></svg>Businesses</button>
+    <button class="nav-btn" data-go="word"><svg><use href="#i-bell"/></svg>My Word<span class="count" data-count="word" hidden></span></button>
+    <button class="nav-btn" data-go="money"><svg><use href="#i-usd"/></svg>Money</button>
+    <button class="nav-btn" data-go="ask"><svg><use href="#i-spark"/></svg>Ask</button>
+    <div class="side-label">OTHER</div>
+    <button class="nav-btn" data-action="settings"><svg><use href="#i-gear"/></svg>Settings</button>
+    <button class="profile" type="button" data-action="settings"><span class="pfp" aria-hidden="true"></span><span class="pn"><b id="side-name">Rahul</b><small>rahulchandrakondamu@gmail.com</small></span></button>
+  </aside>
+
+  <main class="main">
+    <!-- HOME -->
+    <section class="view" id="v-home">
+      <div class="topbar">
+        <div class="grow"><div class="crumb">Rahul / <b>Home</b></div><div class="faint" id="greet" style="font-size:12.5px;margin-top:2px"></div></div>
+        <button class="icon-btn" data-go="ask" aria-label="Ask"><svg><use href="#i-spark"/></svg></button>
+        <button class="icon-btn" data-action="settings" aria-label="Settings"><svg><use href="#i-gear"/></svg></button>
+      </div>
+
+      <div class="hero">
+        <div class="banner" role="img" aria-label="Open field at golden hour with a parked car"></div>
+        <h1 class="hero-q" id="hero-q">Good evening, Rahul. <span>What needs handling?</span></h1>
+        <form class="prompt" id="dump-card" autocomplete="off">
+          <textarea id="dump" aria-label="Notes" placeholder="Type or dictate your meeting notes, promises, payments…"></textarea>
+          <div class="prompt-bar">
+            <button type="button" class="pbtn" id="quick-task"><svg><use href="#i-plus"/></svg>Save as task</button>
+            <button type="button" class="pbtn" data-go="ask"><svg><use href="#i-spark"/></svg>Ask instead</button>
+            <span class="state" id="dump-state"></span>
+            <button type="submit" class="send" id="organise" aria-label="Sort notes"><svg><use href="#i-up"/></svg></button>
+          </div>
+        </form>
+        <div class="pills" id="dump-pills">
+          <button type="button" data-fill="meeting">Meeting notes</button>
+          <button type="button" data-fill="promise">A promise I made</button>
+          <button type="button" data-fill="payment">Payment update</button>
+          <button type="button" data-fill="plan">Plan my day</button>
+        </div>
+        <div class="status-line" id="status-line"></div>
+        <div class="review" id="review" hidden></div>
+      </div>
+
+      <div>
+        <div class="sec-head"><h2>Businesses</h2><button class="link" data-go="clients">Open</button></div>
+        <div class="mfolders rowscroll" id="client-rail" style="margin-top:12px"></div>
+      </div>
+
+      <div class="home">
+        <div class="col">
+
+          <div>
+            <div class="sec-head"><h2>Focus</h2><button class="link" data-action="new-item">+ Add</button></div>
+            <div class="list" id="focus" style="margin-top:12px"></div>
+          </div>
+
+          <div>
+            <div class="sec-head"><h2>Next 7 days</h2></div>
+            <div class="list" id="upcoming" style="margin-top:12px"></div>
+          </div>
+        </div>
+
+        <div class="col">
+          <div class="glass streak" id="streak"></div>
+          <div class="glass day">
+            <div class="day-title"><span id="day-label">Today</span>
+              <button class="icon-btn" style="width:36px;height:36px" id="cal-refresh" aria-label="Refresh calendar"><svg style="width:16px;height:16px"><use href="#i-refresh"/></svg></button>
+            </div>
+            <div class="strip" id="strip"></div>
+            <div class="tl" id="timeline"></div>
+          </div>
+
+          <div class="plan" id="plan-card">
+            <div class="sec-head"><h2>Plan my day</h2><button class="btn small" id="plan-btn">Plan</button></div>
+            <p class="muted" style="font-size:13px" id="plan-intro">Fits your open tasks around today's meetings, hardest work in your best hours.</p>
+            <div id="plan"></div>
+          </div>
+
+          <div>
+            <div class="sec-head"><h2>My Word</h2><button class="link" data-go="word">See all</button></div>
+            <div class="list" id="word-mini" style="margin-top:12px"></div>
+          </div>
+
+          <div>
+            <div class="sec-head"><h2>Trips</h2><button class="link" data-go="money">Money</button></div>
+            <div class="list" id="trips-mini" style="margin-top:12px"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CLIENTS -->
+    <section class="view" id="v-clients" hidden>
+      <div class="topbar">
+        <div class="grow"><div class="crumb" id="clients-crumb">Rahul / <b>Businesses</b></div><h1 class="page-title" id="clients-title">Businesses</h1></div>
+        <button class="btn primary" id="clients-topbtn" data-action="new-business">New business</button>
+      </div>
+      <div id="biz-list" class="mfolders"></div>
+      <div id="biz-head"></div>
+      <div id="clients-list" class="folders"></div>
+      <div id="larp" hidden>
+        <div class="view">
+          <div id="larp-head"></div>
+          <div class="larp-grid">
+            <section class="larp-col">
+              <div class="sec-head"><h2 class="h-ico"><svg><use href="#i-bug"/></svg>Glitches to fix</h2><span class="faint" id="glitch-count" style="font-size:12.5px"></span></div>
+              <form class="quick" id="glitch-form" autocomplete="off">
+                <input class="in" id="glitch-in" placeholder="Describe a glitch and press Enter">
+                <button class="btn primary" type="submit">Add</button>
+              </form>
+              <div class="list" id="glitch-list"></div>
+            </section>
+            <section class="larp-col">
+              <div class="sec-head"><h2 class="h-ico"><svg><use href="#i-film"/></svg>Reels this week</h2>
+                <div class="sch-nav"><button type="button" data-rweek="-1" aria-label="Previous week"><svg><use href="#i-back"/></svg></button><span class="faint" id="rweek-label" style="font-size:12.5px;align-self:center"></span><button type="button" data-rweek="1" aria-label="Next week"><svg style="transform:scaleX(-1)"><use href="#i-back"/></svg></button></div></div>
+              <div class="reel-week" id="reel-week"></div>
+            </section>
+          </div>
+        </div>
+      </div>
+      <div id="client-detail" hidden>
+        <div class="view">
+          <div id="client-head"></div>
+          <div class="cdetail">
+            <div class="col">
+              <div class="quick">
+                <input class="in" id="client-quick" placeholder="Add a task for this client and press Enter">
+                <button class="btn primary" id="client-quick-add">Add</button>
+              </div>
+              <div class="tabs" id="client-tabs">
+                <button data-ctab="open" aria-pressed="true">Open</button>
+                <button data-ctab="notes" aria-pressed="false">Notes</button>
+                <button data-ctab="money" aria-pressed="false">Money</button>
+                <button data-ctab="done" aria-pressed="false">Done</button>
+              </div>
+              <div class="list" id="client-items"></div>
+            </div>
+            <div class="col">
+              <div class="glass day">
+                <div class="day-title"><span id="c-day-label">Today</span></div>
+                <div class="strip" id="c-strip"></div>
+                <div class="tl" id="c-timeline"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MY WORD -->
+    <section class="view" id="v-word" hidden>
+      <div class="topbar">
+        <div class="grow"><div class="crumb">Rahul / <b>My Word</b></div><h1 class="page-title">Promises I made</h1></div>
+      </div>
+      <div class="pc">
+        <form class="prompt pc-box" id="pc-form" autocomplete="off">
+          <textarea id="pc-what" aria-label="Promise" placeholder="What did you promise? e.g. Send the revised brochure to Ravi"></textarea>
+          <div class="prompt-bar pc-bar">
+            <input class="pc-in" id="pc-who" placeholder="To whom" aria-label="To whom">
+            <select class="pc-in" id="pc-client" aria-label="Client"></select>
+            <label class="tog"><input type="checkbox" id="pc-cal" checked>Add to Calendar</label>
+            <span class="state" id="pc-state"></span>
+            <button type="submit" class="send" aria-label="Save promise"><svg><use href="#i-up"/></svg></button>
+          </div>
+        </form>
+        <div class="sched">
+          <div class="sch-info" id="sch-info"></div>
+          <div class="sch-cal">
+            <div class="sch-head"><div><b id="sch-month"></b> <span class="faint" id="sch-year"></span></div>
+              <div class="sch-nav"><button type="button" data-mon="-1" aria-label="Previous month"><svg><use href="#i-back"/></svg></button><button type="button" data-mon="1" aria-label="Next month"><svg style="transform:scaleX(-1)"><use href="#i-back"/></svg></button></div></div>
+            <div class="sch-grid" id="sch-grid"></div>
+          </div>
+          <div class="sch-times">
+            <div class="sch-head"><div id="sch-day"></div>
+              <div class="seg"><button type="button" data-h24="0">12h</button><button type="button" data-h24="1">24h</button></div></div>
+            <div class="slots" id="sch-slots"></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="sec-head"><h2>Open</h2></div>
+        <div class="list" id="word-list" style="margin-top:8px"></div>
+      </div>
+      <div>
+        <div class="sec-head"><h2>Kept</h2></div>
+        <div class="list" id="word-done" style="margin-top:12px"></div>
+      </div>
+    </section>
+
+    <!-- MONEY -->
+    <section class="view" id="v-money" hidden>
+      <div class="topbar">
+        <div class="grow"><div class="crumb">Rahul / <b>Money</b></div><h1 class="page-title">Money</h1></div>
+        <button class="btn primary" data-action="new-payment">New payment</button>
+      </div>
+      <div class="stats" id="money-stats"></div>
+      <div>
+        <div class="sec-head"><h2>Trip goals</h2><button class="link" data-action="new-goal">+ Goal</button></div>
+        <div class="grid2" id="goals" style="margin-top:12px"></div>
+      </div>
+      <div>
+        <div class="sec-head"><h2 class="h-ico"><svg><use href="#i-cart"/></svg>Things to buy</h2><button class="link" data-action="new-wish">+ Add</button></div>
+        <div class="wish-total" id="wish-total" style="margin-top:8px"></div>
+        <div class="list" id="wishlist" style="margin-top:8px"></div>
+      </div>
+      <div class="grid2">
+        <div>
+          <div class="sec-head"><h2>Waiting to be paid</h2></div>
+          <div class="list" id="pending" style="margin-top:12px"></div>
+        </div>
+        <div>
+          <div class="sec-head"><h2>Retainers</h2></div>
+          <div class="list" id="retainers" style="margin-top:12px"></div>
+        </div>
+      </div>
+      <div>
+        <div class="sec-head"><h2>Received</h2></div>
+        <div class="list" id="received" style="margin-top:12px"></div>
+      </div>
+    </section>
+
+    <!-- ASK -->
+    <section class="view" id="v-ask" hidden>
+      <div class="topbar">
+        <div class="grow"><div class="crumb">Rahul / <b>Ask</b></div><h1 class="page-title">Ask</h1></div>
+        <button class="btn small" id="chat-clear">New chat</button>
+      </div>
+      <div class="hero">
+        <div class="banner" role="img" aria-label="Open field at golden hour with a parked car"></div>
+        <h1 class="hero-q">At your service, Rahul. <span>What do you want to know?</span></h1>
+        <form class="prompt" id="ask-form" autocomplete="off">
+          <textarea id="ask-in" aria-label="Question" placeholder="Ask about your clients, deadlines, promises or money…"></textarea>
+          <div class="prompt-bar">
+            <span class="state" id="ask-state">Uses your Command data</span>
+            <button type="submit" class="send" aria-label="Send"><svg><use href="#i-up"/></svg></button>
+          </div>
+        </form>
+        <div class="pills" id="suggest">
+          <button type="button">What's pending for Nirvi?</button>
+          <button type="button">Plan my tomorrow</button>
+          <button type="button">Which promises am I about to break?</button>
+          <button type="button">Am I on track for Bali?</button>
+          <button type="button">Who owes me money?</button>
+        </div>
+      </div>
+      <div class="chat" id="chat"></div>
+    </section>
+  </main>
+
+  <nav class="tabbar" aria-label="Main">
+    <button class="tab" data-go="home" aria-label="Home"><svg><use href="#i-home"/></svg></button>
+    <button class="tab" data-go="clients" aria-label="Businesses"><svg><use href="#i-folder"/></svg></button>
+    <div class="tab"><button class="orb-btn" id="orb" aria-label="New note"><svg><use href="#i-plus"/></svg></button></div>
+    <button class="tab" data-go="money" aria-label="Money"><svg><use href="#i-usd"/></svg></button>
+    <button class="tab" data-go="word" aria-label="My Word"><svg><use href="#i-bell"/></svg><span class="pip" id="word-pip" hidden></span></button>
+  </nav>
+</div>
+
+<div class="side-scrim" id="side-scrim"></div>
+<div class="scrim" id="scrim" hidden><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="js/core.js"></script>
+<script src="js/home.js"></script>
+<script src="js/businesses.js"></script>
+<script src="js/word-larping.js"></script>
+<script src="js/money.js"></script>
+<script src="js/calendar.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/sheets.js"></script>
+<script src="js/events.js"></script>
