@@ -1,0 +1,18 @@
+{
+  "name": "command",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Rahul's personal dashboard for businesses, clients, promises, money and trips.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-win32-x64-msvc": "^4.64.4"
+  }
+}

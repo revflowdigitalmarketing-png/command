@@ -173,8 +173,9 @@ function editSettings() {
       <div class="field"><label for="s-pe">Sharpest until</label><input class="in" type="time" id="s-pe" value="${st.peakEnd}"></div>
     </div>
     <div class="cal-note" style="margin:0">${S.mode === 'cloud' ? 'Your data syncs between your iPhone and your Mac through claude.ai.' : 'Your data is only saved in this browser. Open Command from claude.ai to sync it across devices.'}<br>Google Calendar: ${S.cal.state === 'ok' ? 'connected' : esc(calNote() || 'not connected')}</div>
-    <div class="sheet-actions"><button class="btn" id="s-cancel">Cancel</button><button class="btn primary" id="s-save">Save</button></div>`, sh => {
+    <div class="sheet-actions"><button class="btn danger left" id="s-reset" type="button">Reset businesses & data</button><button class="btn" id="s-cancel">Cancel</button><button class="btn primary" id="s-save">Save</button></div>`, sh => {
     sh.querySelector('#s-cancel').onclick = closeSheet;
+    sh.querySelector('#s-reset').onclick = () => { closeSheet(); resetToDefaults(); };
     sh.querySelector('#s-save').onclick = () => {
       st.name = $('#s-name').value.trim() || 'Rahul';
       ['dayStart:s-ds','dayEnd:s-de','peakStart:s-ps','peakEnd:s-pe'].forEach(p => { const [k, id] = p.split(':'); const v = $('#' + id).value; if (validTime(v)) st[k] = v; });

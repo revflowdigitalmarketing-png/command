@@ -47,10 +47,88 @@ function lsGet(k, f) { try { const v = localStorage.getItem(k); return v ? JSON.
 function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
 
 /* ================= state + storage ================= */
-const DEFAULTS = () => ({ name:'Rahul', clients:[], goals:[], peakStart:'10:00', peakEnd:'13:00', dayStart:'09:00', dayEnd:'21:00' });
+const DEFAULTS = () => ({
+  name: 'Rahul',
+  businesses: [
+    { id: 'biz-revflow', name: 'RevFlow', kind: 'agency', tagline: 'Digital marketing & client growth' },
+    { id: 'biz-weblit', name: 'WEBLIT', kind: 'agency', tagline: 'Web design & development' },
+    { id: 'biz-larping', name: 'LARPING', kind: 'product', tagline: 'App · glitches & reels' }
+  ],
+  clients: [
+    { id: 'cl-1', name: 'Apex Media', short: 'Apex', stars: 5, retainer: 45000, note: 'Social media & performance marketing', color: 0, signed: '2026-08-01', biz: 'biz-revflow' },
+    { id: 'cl-2', name: 'Nova Studio', short: 'Nova', stars: 4, retainer: 35000, note: 'Website maintenance & UI redesign', color: 1, signed: '2026-09-15', biz: 'biz-weblit' }
+  ],
+  goals: [
+    { id: 'goal-dubai', name: 'Dubai trip', target: 250000, saved: 175000, date: addDays(today(), 42), note: '1 week with the crew' },
+    { id: 'goal-bali', name: 'Bali trip', target: 200000, saved: 85000, date: addDays(today(), 95), note: 'Villa & surf' }
+  ],
+  wishlist: [
+    { id: 'wish-1', name: 'Linen shirts & shades', cost: 12000, cat: 'Trip', goal: 'goal-dubai', note: 'Dubai prep', bought: false },
+    { id: 'wish-2', name: 'Noise-cancelling headphones', cost: 24000, cat: 'Tech', goal: '', note: 'Travel & deep work', bought: false }
+  ],
+  peakStart: '10:00', peakEnd: '13:00', dayStart: '09:00', dayEnd: '21:00'
+});
+
+const DEFAULT_ITEMS = () => [
+  { id: 'it-1', kind: 'promise', title: 'Send Q4 digital marketing review report to Apex', client: 'cl-1', person: 'Sameer', due: today(), time: '16:00', priority: 'high', status: 'open', created: Date.now() - 86400000, biz: 'biz-revflow', amount: 0, notes: 'Promised before evening sync', stage: '', link: '', cal: null },
+  { id: 'it-2', kind: 'task', title: 'Review homepage redesign wireframes for Nova Studio', client: 'cl-2', person: 'Karan', due: today(), time: '18:30', priority: 'med', status: 'open', created: Date.now() - 40000000, biz: 'biz-weblit', amount: 0, notes: 'Check mobile breakpoints at 390px', stage: '', link: '', cal: null },
+  { id: 'it-3', kind: 'payment', title: 'Monthly retainer - October', client: 'cl-1', person: '', due: today(), time: '', priority: 'med', status: 'open', created: Date.now() - 86400000, biz: 'biz-revflow', amount: 45000, notes: 'Invoice #RF-104', stage: '', link: '', cal: null },
+  { id: 'it-4', kind: 'payment', title: 'Monthly retainer - September', client: 'cl-1', person: '', due: addDays(today(), -30), time: '', priority: 'med', status: 'done', doneAt: Date.now() - 2592000000, biz: 'biz-revflow', amount: 45000, notes: 'Received via UPI', stage: '', link: '', cal: null },
+  { id: 'it-5', kind: 'payment', title: 'Website UI redesign - Milestone 1', client: 'cl-2', person: '', due: addDays(today(), -14), time: '', priority: 'med', status: 'done', doneAt: Date.now() - 1209600000, biz: 'biz-weblit', amount: 35000, notes: 'Received via Bank Transfer', stage: '', link: '', cal: null },
+  { id: 'it-6', kind: 'glitch', title: 'Audio desync when switching playback speed on mobile', client: '', person: '', due: '', time: '', priority: 'high', status: 'open', created: Date.now() - 30000000, biz: 'biz-larping', amount: 0, notes: '', stage: 'fixing', link: '', cal: null },
+  { id: 'it-7', kind: 'glitch', title: 'Dark mode toggle flickers white on first load', client: '', person: '', due: '', time: '', priority: 'med', status: 'open', created: Date.now() - 60000000, biz: 'biz-larping', amount: 0, notes: '', stage: 'todo', link: '', cal: null },
+  { id: 'it-8', kind: 'glitch', title: 'Video export fails on iOS Safari background tab', client: '', person: '', due: '', time: '', priority: 'med', status: 'done', doneAt: Date.now() - 10000000, created: Date.now() - 90000000, biz: 'biz-larping', amount: 0, notes: '', stage: 'fixed', link: '', cal: null },
+  { id: 'it-9', kind: 'reel', title: 'Day in the life running 3 businesses at 22', client: '', person: '', due: today(), time: '17:00', priority: 'med', status: 'open', created: Date.now() - 20000000, biz: 'biz-larping', amount: 0, notes: 'Behind-the-scenes B-roll showing Command', stage: 'shoot', link: '', cal: null },
+  { id: 'it-10', kind: 'reel', title: 'Why I stopped using frameworks and built my own command center', client: '', person: '', due: addDays(today(), -2), time: '14:00', priority: 'high', status: 'done', doneAt: Date.now() - 86400000, biz: 'biz-larping', amount: 0, notes: 'Posted to IG Reels', stage: 'posted', link: 'https://instagram.com/reel/example', cal: null }
+];
+
+const def = DEFAULTS();
+const savedSettings = lsGet('cmd.settings', null) || {};
+
+// Check if all three canonical businesses exist in local storage
+const hasAllCanonical = Array.isArray(savedSettings.businesses) &&
+  savedSettings.businesses.some(b => b.id === 'biz-revflow' || (b.name && b.name.toLowerCase().includes('revflow'))) &&
+  savedSettings.businesses.some(b => b.id === 'biz-larping' || (b.name && b.name.toLowerCase().includes('larping')));
+
+const finalBusinesses = hasAllCanonical ? savedSettings.businesses : def.businesses;
+const finalClients = (hasAllCanonical && Array.isArray(savedSettings.clients) && savedSettings.clients.length >= 2)
+  ? savedSettings.clients
+  : def.clients;
+const finalGoals = (Array.isArray(savedSettings.goals) && savedSettings.goals.length >= 2)
+  ? savedSettings.goals
+  : def.goals;
+const finalWishlist = (Array.isArray(savedSettings.wishlist) && savedSettings.wishlist.length > 0)
+  ? savedSettings.wishlist
+  : def.wishlist;
+
+const finalSettings = {
+  ...def,
+  ...savedSettings,
+  businesses: finalBusinesses,
+  clients: finalClients,
+  goals: finalGoals,
+  wishlist: finalWishlist
+};
+
+const savedItems = lsGet('cmd.items', null);
+const hasSufficientItems = hasAllCanonical && Array.isArray(savedItems) && savedItems.length >= 5 && savedItems.some(i => i.biz === 'biz-larping');
+const finalItems = hasSufficientItems ? savedItems : DEFAULT_ITEMS();
+
+lsSet('cmd.settings', finalSettings);
+lsSet('cmd.items', finalItems);
+
+function resetToDefaults() {
+  S.settings = DEFAULTS();
+  S.items = DEFAULT_ITEMS();
+  lsSet('cmd.settings', S.settings);
+  lsSet('cmd.items', S.items);
+  renderNow();
+  toast('Reset to Rahul\'s default businesses & clients.');
+}
+
 const S = {
-  settings: { ...DEFAULTS(), ...(lsGet('cmd.settings', {}) || {}) },
-  items: lsGet('cmd.items', []) || [],
+  settings: finalSettings,
+  items: finalItems,
   events: [], cal: { state:'loading', msg:'' },
   view: 'home', client: null, ctab: 'open', day: today(),
   review: null, plan: lsGet('cmd.plan', null), chat: [], mode: 'loading'
