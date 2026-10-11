@@ -46,87 +46,246 @@ function useCap(name) {
 function lsGet(k, f) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : f; } catch { return f; } }
 function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
 
-/* ================= state + storage ================= */
-const DEFAULTS = () => ({
-  name: 'Rahul',
-  businesses: [
-    { id: 'biz-revflow', name: 'RevFlow', kind: 'agency', tagline: 'Digital marketing & client growth' },
-    { id: 'biz-weblit', name: 'WEBLIT', kind: 'agency', tagline: 'Web design & development' },
-    { id: 'biz-larping', name: 'LARPING', kind: 'product', tagline: 'App · glitches & reels' }
-  ],
-  clients: [
-    { id: 'cl-1', name: 'Apex Media', short: 'Apex', stars: 5, retainer: 45000, note: 'Social media & performance marketing', color: 0, signed: '2026-08-01', biz: 'biz-revflow' },
-    { id: 'cl-2', name: 'Nova Studio', short: 'Nova', stars: 4, retainer: 35000, note: 'Website maintenance & UI redesign', color: 1, signed: '2026-09-15', biz: 'biz-weblit' }
-  ],
-  goals: [
-    { id: 'goal-dubai', name: 'Dubai trip', target: 250000, saved: 175000, date: addDays(today(), 42), note: '1 week with the crew' },
-    { id: 'goal-bali', name: 'Bali trip', target: 200000, saved: 85000, date: addDays(today(), 95), note: 'Villa & surf' }
-  ],
-  wishlist: [
-    { id: 'wish-1', name: 'Linen shirts & shades', cost: 12000, cat: 'Trip', goal: 'goal-dubai', note: 'Dubai prep', bought: false },
-    { id: 'wish-2', name: 'Noise-cancelling headphones', cost: 24000, cat: 'Tech', goal: '', note: 'Travel & deep work', bought: false }
-  ],
-  peakStart: '10:00', peakEnd: '13:00', dayStart: '09:00', dayEnd: '21:00'
-});
-
-const DEFAULT_ITEMS = () => [
-  { id: 'it-1', kind: 'promise', title: 'Send Q4 digital marketing review report to Apex', client: 'cl-1', person: 'Sameer', due: today(), time: '16:00', priority: 'high', status: 'open', created: Date.now() - 86400000, biz: 'biz-revflow', amount: 0, notes: 'Promised before evening sync', stage: '', link: '', cal: null },
-  { id: 'it-2', kind: 'task', title: 'Review homepage redesign wireframes for Nova Studio', client: 'cl-2', person: 'Karan', due: today(), time: '18:30', priority: 'med', status: 'open', created: Date.now() - 40000000, biz: 'biz-weblit', amount: 0, notes: 'Check mobile breakpoints at 390px', stage: '', link: '', cal: null },
-  { id: 'it-3', kind: 'payment', title: 'Monthly retainer - October', client: 'cl-1', person: '', due: today(), time: '', priority: 'med', status: 'open', created: Date.now() - 86400000, biz: 'biz-revflow', amount: 45000, notes: 'Invoice #RF-104', stage: '', link: '', cal: null },
-  { id: 'it-4', kind: 'payment', title: 'Monthly retainer - September', client: 'cl-1', person: '', due: addDays(today(), -30), time: '', priority: 'med', status: 'done', doneAt: Date.now() - 2592000000, biz: 'biz-revflow', amount: 45000, notes: 'Received via UPI', stage: '', link: '', cal: null },
-  { id: 'it-5', kind: 'payment', title: 'Website UI redesign - Milestone 1', client: 'cl-2', person: '', due: addDays(today(), -14), time: '', priority: 'med', status: 'done', doneAt: Date.now() - 1209600000, biz: 'biz-weblit', amount: 35000, notes: 'Received via Bank Transfer', stage: '', link: '', cal: null },
-  { id: 'it-6', kind: 'glitch', title: 'Audio desync when switching playback speed on mobile', client: '', person: '', due: '', time: '', priority: 'high', status: 'open', created: Date.now() - 30000000, biz: 'biz-larping', amount: 0, notes: '', stage: 'fixing', link: '', cal: null },
-  { id: 'it-7', kind: 'glitch', title: 'Dark mode toggle flickers white on first load', client: '', person: '', due: '', time: '', priority: 'med', status: 'open', created: Date.now() - 60000000, biz: 'biz-larping', amount: 0, notes: '', stage: 'todo', link: '', cal: null },
-  { id: 'it-8', kind: 'glitch', title: 'Video export fails on iOS Safari background tab', client: '', person: '', due: '', time: '', priority: 'med', status: 'done', doneAt: Date.now() - 10000000, created: Date.now() - 90000000, biz: 'biz-larping', amount: 0, notes: '', stage: 'fixed', link: '', cal: null },
-  { id: 'it-9', kind: 'reel', title: 'Day in the life running 3 businesses at 22', client: '', person: '', due: today(), time: '17:00', priority: 'med', status: 'open', created: Date.now() - 20000000, biz: 'biz-larping', amount: 0, notes: 'Behind-the-scenes B-roll showing Command', stage: 'shoot', link: '', cal: null },
-  { id: 'it-10', kind: 'reel', title: 'Why I stopped using frameworks and built my own command center', client: '', person: '', due: addDays(today(), -2), time: '14:00', priority: 'high', status: 'done', doneAt: Date.now() - 86400000, biz: 'biz-larping', amount: 0, notes: 'Posted to IG Reels', stage: 'posted', link: 'https://instagram.com/reel/example', cal: null }
+/* ================= profiles + state + storage ================= */
+const PROFILES = [
+  {
+    id: 'rahul',
+    name: 'Rahul',
+    email: 'rahulchandrakondamu@gmail.com',
+    avatarLetter: 'R'
+  },
+  {
+    id: 'sri-chandana',
+    name: 'Sri Chandana',
+    email: 'srichandana@gmail.com',
+    avatarLetter: 'S'
+  },
+  {
+    id: 'adithya',
+    name: 'Adithya',
+    email: 'adithya@gmail.com',
+    avatarLetter: 'A'
+  }
 ];
 
-const def = DEFAULTS();
-const savedSettings = lsGet('cmd.settings', null) || {};
+function defaultSettingsFor(profileId) {
+  if (profileId === 'adithya') {
+    return {
+      name: 'Adithya',
+      email: 'adithya@gmail.com',
+      businesses: [
+        { id: 'biz-revflow', name: 'RevFlow', kind: 'agency', tagline: '' },
+        { id: 'biz-content', name: 'Content Agency', kind: 'agency', tagline: '' }
+      ],
+      clients: [
+        { id: 'cl-1', name: 'Apex Media', short: 'Apex', stars: 5, retainer: 45000, note: 'Social media & performance marketing', color: 0, signed: '2026-08-01', biz: 'biz-revflow' },
+        { id: 'cl-2', name: 'Nova Studio', short: 'Nova', stars: 4, retainer: 35000, note: 'Content creation & video campaigns', color: 1, signed: '2026-09-15', biz: 'biz-content' }
+      ],
+      goals: [
+        { id: 'goal-dubai', name: 'Dubai trip', target: 250000, saved: 175000, date: addDays(today(), 42), note: '1 week with the crew' },
+        { id: 'goal-bali', name: 'Bali trip', target: 200000, saved: 85000, date: addDays(today(), 95), note: 'Villa & surf' }
+      ],
+      wishlist: [
+        { id: 'wish-1', name: 'Linen shirts & shades', cost: 12000, cat: 'Trip', goal: 'goal-dubai', note: 'Dubai prep', bought: false },
+        { id: 'wish-2', name: 'Noise-cancelling headphones', cost: 24000, cat: 'Tech', goal: '', note: 'Travel & deep work', bought: false }
+      ],
+      peakStart: '10:00', peakEnd: '13:00', dayStart: '09:00', dayEnd: '21:00'
+    };
+  }
+  if (profileId === 'sri-chandana') {
+    return {
+      name: 'Sri Chandana',
+      email: 'srichandana@gmail.com',
+      businesses: [
+        { id: 'biz-revflow', name: 'RevFlow', kind: 'agency', tagline: '' },
+        { id: 'biz-weblit', name: 'WEBLIT', kind: 'agency', tagline: '' },
+        { id: 'biz-larping', name: 'LARPING', kind: 'product', tagline: '' }
+      ],
+      clients: [
+        { id: 'cl-1', name: 'Apex Media', short: 'Apex', stars: 5, retainer: 45000, note: 'Social media & performance marketing', color: 0, signed: '2026-08-01', biz: 'biz-revflow' },
+        { id: 'cl-2', name: 'Nova Studio', short: 'Nova', stars: 4, retainer: 35000, note: 'Website maintenance & UI redesign', color: 1, signed: '2026-09-15', biz: 'biz-weblit' }
+      ],
+      goals: [
+        { id: 'goal-dubai', name: 'Dubai trip', target: 250000, saved: 175000, date: addDays(today(), 42), note: '1 week with the crew' },
+        { id: 'goal-bali', name: 'Bali trip', target: 200000, saved: 85000, date: addDays(today(), 95), note: 'Villa & surf' }
+      ],
+      wishlist: [
+        { id: 'wish-1', name: 'Linen shirts & shades', cost: 12000, cat: 'Trip', goal: 'goal-dubai', note: 'Dubai prep', bought: false },
+        { id: 'wish-2', name: 'Noise-cancelling headphones', cost: 24000, cat: 'Tech', goal: '', note: 'Travel & deep work', bought: false }
+      ],
+      peakStart: '10:00', peakEnd: '13:00', dayStart: '09:00', dayEnd: '21:00'
+    };
+  }
+  // rahul
+  return {
+    name: 'Rahul',
+    email: 'rahulchandrakondamu@gmail.com',
+    businesses: [
+      { id: 'biz-revflow', name: 'RevFlow', kind: 'agency', tagline: '' },
+      { id: 'biz-weblit', name: 'WEBLIT', kind: 'agency', tagline: '' },
+      { id: 'biz-larping', name: 'LARPING', kind: 'product', tagline: '' }
+    ],
+    clients: [
+      { id: 'cl-1', name: 'Apex Media', short: 'Apex', stars: 5, retainer: 45000, note: 'Social media & performance marketing', color: 0, signed: '2026-08-01', biz: 'biz-revflow' },
+      { id: 'cl-2', name: 'Nova Studio', short: 'Nova', stars: 4, retainer: 35000, note: 'Website maintenance & UI redesign', color: 1, signed: '2026-09-15', biz: 'biz-weblit' }
+    ],
+    goals: [
+      { id: 'goal-dubai', name: 'Dubai trip', target: 250000, saved: 175000, date: addDays(today(), 42), note: '1 week with the crew' },
+      { id: 'goal-bali', name: 'Bali trip', target: 200000, saved: 85000, date: addDays(today(), 95), note: 'Villa & surf' }
+    ],
+    wishlist: [
+      { id: 'wish-1', name: 'Linen shirts & shades', cost: 12000, cat: 'Trip', goal: 'goal-dubai', note: 'Dubai prep', bought: false },
+      { id: 'wish-2', name: 'Noise-cancelling headphones', cost: 24000, cat: 'Tech', goal: '', note: 'Travel & deep work', bought: false }
+    ],
+    peakStart: '10:00', peakEnd: '13:00', dayStart: '09:00', dayEnd: '21:00'
+  };
+}
 
-// Check if all three canonical businesses exist in local storage
-const hasAllCanonical = Array.isArray(savedSettings.businesses) &&
-  savedSettings.businesses.some(b => b.id === 'biz-revflow' || (b.name && b.name.toLowerCase().includes('revflow'))) &&
-  savedSettings.businesses.some(b => b.id === 'biz-larping' || (b.name && b.name.toLowerCase().includes('larping')));
+function defaultItemsFor(profileId) {
+  if (profileId === 'adithya') {
+    return [
+      { id: 'it-4', kind: 'payment', title: 'Monthly retainer - September', client: 'cl-1', person: '', due: addDays(today(), -30), time: '', priority: 'med', status: 'done', doneAt: Date.now() - 2592000000, biz: 'biz-revflow', amount: 45000, notes: 'Received via UPI', stage: '', link: '', cal: null },
+      { id: 'it-5', kind: 'payment', title: 'Content campaign - Milestone 1', client: 'cl-2', person: '', due: addDays(today(), -14), time: '', priority: 'med', status: 'done', doneAt: Date.now() - 1209600000, biz: 'biz-content', amount: 35000, notes: 'Received via Bank Transfer', stage: '', link: '', cal: null }
+    ];
+  }
+  return [
+    { id: 'it-4', kind: 'payment', title: 'Monthly retainer - September', client: 'cl-1', person: '', due: addDays(today(), -30), time: '', priority: 'med', status: 'done', doneAt: Date.now() - 2592000000, biz: 'biz-revflow', amount: 45000, notes: 'Received via UPI', stage: '', link: '', cal: null },
+    { id: 'it-5', kind: 'payment', title: 'Website UI redesign - Milestone 1', client: 'cl-2', person: '', due: addDays(today(), -14), time: '', priority: 'med', status: 'done', doneAt: Date.now() - 1209600000, biz: 'biz-weblit', amount: 35000, notes: 'Received via Bank Transfer', stage: '', link: '', cal: null },
+    { id: 'it-6', kind: 'glitch', title: 'Audio desync when switching playback speed on mobile', client: '', person: '', due: '', time: '', priority: 'high', status: 'open', created: Date.now() - 30000000, biz: 'biz-larping', amount: 0, notes: '', stage: 'fixing', link: '', cal: null },
+    { id: 'it-7', kind: 'glitch', title: 'Dark mode toggle flickers white on first load', client: '', person: '', due: '', time: '', priority: 'med', status: 'open', created: Date.now() - 60000000, biz: 'biz-larping', amount: 0, notes: '', stage: 'todo', link: '', cal: null },
+    { id: 'it-8', kind: 'glitch', title: 'Video export fails on iOS Safari background tab', client: '', person: '', due: '', time: '', priority: 'med', status: 'done', doneAt: Date.now() - 10000000, created: Date.now() - 90000000, biz: 'biz-larping', amount: 0, notes: '', stage: 'fixed', link: '', cal: null },
+    { id: 'it-9', kind: 'reel', title: 'Day in the life running 3 businesses at 22', client: '', person: '', due: '', time: '', priority: 'med', status: 'open', created: Date.now() - 20000000, biz: 'biz-larping', amount: 0, notes: 'Behind-the-scenes B-roll showing Command', stage: 'shoot', link: '', cal: null },
+    { id: 'it-10', kind: 'reel', title: 'Why I stopped using frameworks and built my own command center', client: '', person: '', due: addDays(today(), -2), time: '14:00', priority: 'high', status: 'done', doneAt: Date.now() - 86400000, biz: 'biz-larping', amount: 0, notes: 'Posted to IG Reels', stage: 'posted', link: 'https://instagram.com/reel/example', cal: null }
+  ];
+}
 
-const finalBusinesses = hasAllCanonical ? savedSettings.businesses : def.businesses;
-const finalClients = (hasAllCanonical && Array.isArray(savedSettings.clients) && savedSettings.clients.length >= 2)
-  ? savedSettings.clients
-  : def.clients;
-const finalGoals = (Array.isArray(savedSettings.goals) && savedSettings.goals.length >= 2)
-  ? savedSettings.goals
-  : def.goals;
-const finalWishlist = (Array.isArray(savedSettings.wishlist) && savedSettings.wishlist.length > 0)
-  ? savedSettings.wishlist
-  : def.wishlist;
+const DEFAULTS = () => defaultSettingsFor(S?.profileId || lsGet('cmd.active_profile', 'rahul'));
+const DEFAULT_ITEMS = () => defaultItemsFor(S?.profileId || lsGet('cmd.active_profile', 'rahul'));
 
-const finalSettings = {
-  ...def,
-  ...savedSettings,
-  businesses: finalBusinesses,
-  clients: finalClients,
-  goals: finalGoals,
-  wishlist: finalWishlist
-};
+function getProfileSettings(pid) {
+  const def = defaultSettingsFor(pid);
+  const saved = lsGet(`cmd.settings_${pid}`, null) || (pid === 'rahul' ? lsGet('cmd.settings', null) : null) || {};
+  return { ...def, ...saved };
+}
 
-const savedItems = lsGet('cmd.items', null);
-const hasSufficientItems = hasAllCanonical && Array.isArray(savedItems) && savedItems.length >= 5 && savedItems.some(i => i.biz === 'biz-larping');
-const finalItems = hasSufficientItems ? savedItems : DEFAULT_ITEMS();
+function getProfileItems(pid) {
+  const def = defaultItemsFor(pid);
+  const saved = lsGet(`cmd.items_${pid}`, null) || (pid === 'rahul' ? lsGet('cmd.items', null) : null);
+  const raw = Array.isArray(saved) && saved.length ? saved : def;
+  return raw.filter(i => !['it-1', 'it-2', 'it-3'].includes(i.id) && !(i.title && i.title.toLowerCase().includes('digital marketing')));
+}
 
+const activeProfileId = lsGet('cmd.active_profile', 'rahul');
+const finalSettings = getProfileSettings(activeProfileId);
+const finalItems = getProfileItems(activeProfileId);
+
+lsSet(`cmd.settings_${activeProfileId}`, finalSettings);
+lsSet(`cmd.items_${activeProfileId}`, finalItems);
 lsSet('cmd.settings', finalSettings);
 lsSet('cmd.items', finalItems);
 
+function triggerWorldPortal(p, ox, oy) {
+  const root = document.documentElement;
+  const cx = Math.round(ox || window.innerWidth / 2);
+  const cy = Math.round(oy || window.innerHeight / 2);
+  root.style.setProperty('--world-x', `${cx}px`);
+  root.style.setProperty('--world-y', `${cy}px`);
+  
+  if (p.id === 'sri-chandana') {
+    root.style.setProperty('--portal-tint', 'rgba(255, 182, 193, 0.28)');
+    root.style.setProperty('--portal-border', 'rgba(255, 192, 203, 0.9)');
+    root.style.setProperty('--portal-glow', 'rgba(255, 182, 193, 0.65)');
+    root.style.setProperty('--portal-accent', '#fbcfe8');
+  } else if (p.id === 'adithya') {
+    root.style.setProperty('--portal-tint', 'rgba(168, 85, 247, 0.25)');
+    root.style.setProperty('--portal-border', 'rgba(192, 132, 252, 0.9)');
+    root.style.setProperty('--portal-glow', 'rgba(168, 85, 247, 0.65)');
+    root.style.setProperty('--portal-accent', '#ddd6fe');
+  } else {
+    root.style.setProperty('--portal-tint', 'rgba(255, 255, 255, 0.22)');
+    root.style.setProperty('--portal-border', 'rgba(255, 255, 255, 0.9)');
+    root.style.setProperty('--portal-glow', 'rgba(255, 255, 255, 0.6)');
+    root.style.setProperty('--portal-accent', '#ffffff');
+  }
+  
+  document.body.dataset.profile = p.id;
+  
+  let portal = document.getElementById('world-portal');
+  if (!portal) {
+    portal = document.createElement('div');
+    portal.id = 'world-portal';
+    portal.className = 'world-portal';
+    portal.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(portal);
+  }
+  
+  portal.hidden = false;
+  portal.innerHTML = `
+    <div class="portal-curtain"></div>
+    <div class="portal-ripple"></div>
+    <div class="portal-ripple ring-2"></div>
+    <div class="portal-pill">
+      <span class="p-dot">${p.avatarLetter}</span>
+      <span>Entering <b>${esc(p.name)}'s World</b></span>
+    </div>
+  `;
+  
+  const app = document.querySelector('.app');
+  if (app) {
+    app.classList.remove('world-entering');
+    void app.offsetWidth;
+    app.classList.add('world-entering');
+  }
+  
+  clearTimeout(triggerWorldPortal._tid);
+  triggerWorldPortal._tid = setTimeout(() => {
+    if (app) app.classList.remove('world-entering');
+    if (portal) portal.hidden = true;
+  }, 1900);
+}
+
+function switchProfile(pid, origin = null) {
+  const p = PROFILES.find(x => x.id === pid);
+  if (!p) return;
+  
+  const ox = origin && origin.x !== undefined ? origin.x : window.innerWidth / 2;
+  const oy = origin && origin.y !== undefined ? origin.y : window.innerHeight / 2;
+  
+  // Save current profile data first
+  const prevId = S.profileId || 'rahul';
+  lsSet(`cmd.settings_${prevId}`, S.settings);
+  lsSet(`cmd.items_${prevId}`, S.items);
+  
+  // Set new active profile
+  S.profileId = pid;
+  lsSet('cmd.active_profile', pid);
+  
+  S.settings = getProfileSettings(pid);
+  S.items = getProfileItems(pid);
+  lsSet('cmd.settings', S.settings);
+  lsSet('cmd.items', S.items);
+  
+  S.biz = null;
+  S.client = null;
+  
+  triggerWorldPortal(p, ox, oy);
+  renderNow();
+}
+
 function resetToDefaults() {
-  S.settings = DEFAULTS();
-  S.items = DEFAULT_ITEMS();
+  const pid = S.profileId || 'rahul';
+  S.settings = defaultSettingsFor(pid);
+  S.items = defaultItemsFor(pid);
+  lsSet(`cmd.settings_${pid}`, S.settings);
+  lsSet(`cmd.items_${pid}`, S.items);
   lsSet('cmd.settings', S.settings);
   lsSet('cmd.items', S.items);
   renderNow();
-  toast('Reset to Rahul\'s default businesses & clients.');
+  toast(`Reset to ${S.settings.name}'s default businesses & clients.`);
 }
 
 const S = {
+  profileId: activeProfileId,
   settings: finalSettings,
   items: finalItems,
   events: [], cal: { state:'loading', msg:'' },
@@ -170,7 +329,10 @@ function dbErr(e) {
   return 'Could not sync that change. It is kept on this device.';
 }
 function saveSettings() {
-  lsSet('cmd.settings', S.settings); render();
+  const pid = S.profileId || 'rahul';
+  lsSet(`cmd.settings_${pid}`, S.settings);
+  lsSet('cmd.settings', S.settings);
+  render();
   if (!settingsRef) return;
   const body = JSON.parse(JSON.stringify(S.settings));
   settingsQ = settingsQ.then(() => settingsRef.set(body)).catch(e => toast(dbErr(e)));
@@ -179,12 +341,18 @@ async function saveItem(it) {
   it.updated = Date.now();
   const i = S.items.findIndex(x => x.id === it.id);
   if (i >= 0) S.items[i] = it; else S.items.push(it);
-  lsSet('cmd.items', S.items); render();
+  const pid = S.profileId || 'rahul';
+  lsSet(`cmd.items_${pid}`, S.items);
+  lsSet('cmd.items', S.items);
+  render();
   if (itemsCol) { try { await itemsCol.doc(it.id).set(JSON.parse(JSON.stringify(it))); } catch (e) { toast(dbErr(e)); } }
 }
 async function removeItem(id) {
   S.items = S.items.filter(x => x.id !== id);
-  lsSet('cmd.items', S.items); render();
+  const pid = S.profileId || 'rahul';
+  lsSet(`cmd.items_${pid}`, S.items);
+  lsSet('cmd.items', S.items);
+  render();
   if (itemsCol) { try { await itemsCol.doc(id).delete(); } catch (e) { toast(dbErr(e)); } }
 }
 function makeItem(p) {

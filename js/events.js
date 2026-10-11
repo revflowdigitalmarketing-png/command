@@ -41,8 +41,16 @@ document.addEventListener('click', e => {
   if (d.pcdate) { PC.date = d.pcdate; renderComposer(); return; }
   if (d.pctime !== undefined) { PC.time = d.pctime; renderComposer(); return; }
   if (d.h24 !== undefined) { PC.h24 = d.h24 === '1'; renderComposer(); return; }
-  if (d.mon) { const [y, m] = PC.month.split('-').map(Number); const nd = new Date(y, m - 1 + Number(d.mon), 1); const nm = `${nd.getFullYear()}-${pad(nd.getMonth() + 1)}`; if (nm >= today().slice(0, 7)) { PC.month = nm; renderComposer(); } return; }
+  if (d.action === 'profiles') { document.body.classList.remove('menu-open'); openProfileSheet(); return; }
   if (d.action === 'settings') { document.body.classList.remove('menu-open'); editSettings(); return; }
+  if (d.switchprofile) {
+    const rect = t.getBoundingClientRect();
+    const originX = (e.clientX && e.clientX > 0) ? e.clientX : (rect.left + rect.width / 2);
+    const originY = (e.clientY && e.clientY > 0) ? e.clientY : (rect.top + rect.height / 2);
+    closeSheet();
+    switchProfile(d.switchprofile, { x: originX, y: originY });
+    return;
+  }
   if (d.action === 'new-client') { editClient(null); return; }
   if (d.action === 'new-item') { editItem(null, { kind:'task', due: today() }); return; }
   if (d.action === 'new-promise') { editItem(null, { kind:'promise', priority:'high' }); return; }

@@ -16,14 +16,201 @@ function sampleErr(e) {
 function clientsForAI() { return clients().map(c => ({ id: c.id, name: c.name, short: c.short || '', rating: starsOf(c) + '/5 (higher = more important)', note: c.note || '' })); }
 function nowStamp() { const d = new Date(); return `${today()} (${d.toLocaleDateString('en-IN',{weekday:'long'})}) ${pad(d.getHours())}:${pad(d.getMinutes())}, timezone ${TZ}`; }
 
+function parseNotesLocally(rawText) {
+  if (!rawText || !rawText.trim()) return { summary: '', items: [] };
+
+  const lines = rawText
+    .split(/\r?\n|(?<=[.!?])\s+(?=[A-Z0-9\*\-•])/)
+    .map(l => l.trim().replace(/^[-•*]\s+|\d+\.\s+/, ''))
+    .filter(l => l.length > 0);
+
+  const t = today();
+  const allClients = clients();
+  const parsedItems = [];
+
+  for (const line of lines) {
+    const lower = line.toLowerCase();
+    
+    // Kind detection
+    let kind = 'task';
+    if (/\b(meet|meeting|call|sync|zoom|google meet|catch up|coffee)\b/i.test(lower)) {
+      kind = 'meeting';
+    } else if (/\b(promise|promised|told|gave my word|committed|will send|will give|pledged)\b/i.test(lower)) {
+      kind = 'promise';
+    } else if (/\b(payment|paid|invoice|retainer|owes|wire|upi|transfer|received ₹|received rs)\b/i.test(lower)) {
+      kind = 'payment';
+    } else if (/\b(glitch|bug|error|crash|broken|flicker|not working|fix the|fix bug)\b/i.test(lower)) {
+      kind = 'glitch';
+    } else if (/\b(reel|instagram|tiktok|video post|b-roll|shoot reel|post reel)\b/i.test(lower)) {
+      kind = 'reel';
+    } else if (/^(note:|fyi|remember|idea:|info:)/i.test(lower)) {
+      kind = 'note';
+    }
+
+    // Client detection
+    let clientId = '';
+    let matchedClient = null;
+    for (const c of allClients) {
+      const cName = c.name.toLowerCase();
+      const cShort = (c.short || '').toLowerCase();
+      if ((cShort && lower.includes(cShort)) || lower.includes(cName)) {
+        clientId = c.id;
+        matchedClient = c;
+        break;
+      }
+    }
+
+    // Business detection
+    let bizId = '';
+    if (kind === 'glitch' || kind === 'reel') {
+      bizId = productBiz();
+    } else if (matchedClient) {
+      bizId = clientBiz(matchedClient);
+    }
+
+    // Person detection
+    let person = '';
+    const personMatch = line.match(/\b(?:told|to|with|for|ask|from)\s+([A-Z][a-z]+)\b/);
+    if (personMatch) {
+      const candidate = personMatch[1];
+      const ignore = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday',
+                      'Today','Tomorrow','Tonight','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      if (!ignore.includes(candidate)) {
+        person = candidate;
+      }
+    }
+
+    // Date resolution
+    let due = '';
+    if (/\b(today|tonight|eod|end of day)\b/i.test(lower)) {
+      due = t;
+    } else if (/\b(tomorrow)\b/i.test(lower)) {
+      due = addDays(t, 1);
+    } else if (/\b(day after tomorrow)\b/i.test(lower)) {
+      due = addDays(t, 2);
+    } else if (/\b(yesterday)\b/i.test(lower)) {
+      due = addDays(t, -1);
+    } else {
+      const daysOfWeek = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+      for (let dayIdx = 0; dayIdx < 7; dayIdx++) {
+        const dayName = daysOfWeek[dayIdx];
+        const regex = new RegExp(`\\b(?:this|next|coming)?\\s*${dayName}\\b`, 'i');
+        if (regex.test(lower)) {
+          const currentDayIdx = parseYmd(t).getDay();
+          let diff = (dayIdx - currentDayIdx + 7) % 7;
+          if (diff === 0) diff = 7;
+          due = addDays(t, diff);
+          break;
+        }
+      }
+      if (!due) {
+        const isoMatch = line.match(/\b\d{4}-\d{2}-\d{2}\b/);
+        if (isoMatch && validDate(isoMatch[0])) {
+          due = isoMatch[0];
+        } else {
+          const textDateMatch = line.match(/\b(\d{1,2})(?:st|nd|rd|th)?\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b/i) ||
+                                line.match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{1,2})(?:st|nd|rd|th)?\b/i);
+          if (textDateMatch) {
+            const months = { jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11 };
+            const mStr = (months[textDateMatch[1].toLowerCase().slice(0,3)] !== undefined ? textDateMatch[1] : textDateMatch[2]).toLowerCase().slice(0,3);
+            const dNum = parseInt(months[textDateMatch[1].toLowerCase().slice(0,3)] !== undefined ? textDateMatch[2] : textDateMatch[1], 10);
+            const yr = parseYmd(t).getFullYear();
+            const cand = new Date(yr, months[mStr], dNum);
+            due = ymd(cand);
+          }
+        }
+      }
+    }
+
+    // Time detection
+    let time = '';
+    const timeMatch = line.match(/\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/i) || line.match(/\bat\s+(\d{1,2})(?::(\d{2}))?\b/i);
+    if (timeMatch) {
+      let h = parseInt(timeMatch[1], 10);
+      let m = parseInt(timeMatch[2] || '0', 10);
+      const ampm = (timeMatch[3] || '').toLowerCase();
+      if (ampm === 'pm' && h < 12) h += 12;
+      if (ampm === 'am' && h === 12) h = 0;
+      if (h >= 0 && h < 24 && m >= 0 && m < 60) {
+        time = `${pad(h)}:${pad(m)}`;
+      }
+    } else {
+      const h24Match = line.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/);
+      if (h24Match) time = `${pad(parseInt(h24Match[1],10))}:${pad(parseInt(h24Match[2],10))}`;
+    }
+
+    // Amount detection (INR)
+    let amount = 0;
+    const lMatch = line.match(/(?:₹|rs\.?|inr)?\s*(\d+(?:\.\d+)?)\s*(?:l|lakh|lac)s?\b/i);
+    const kMatch = line.match(/(?:₹|rs\.?|inr)?\s*(\d+(?:\.\d+)?)\s*k\b/i);
+    const rupeeMatch = line.match(/(?:₹|rs\.?|inr)\s*(\d[\d,]*)/i);
+    if (lMatch) {
+      amount = Math.round(parseFloat(lMatch[1]) * 100000);
+    } else if (kMatch) {
+      amount = Math.round(parseFloat(kMatch[1]) * 1000);
+    } else if (rupeeMatch) {
+      amount = parseInt(rupeeMatch[1].replace(/,/g, ''), 10) || 0;
+    }
+
+    // Priority detection
+    let priority = 'med';
+    if (/\b(urgent|asap|crucial|immediately|priority high|emergency)\b/i.test(lower)) {
+      priority = 'high';
+    } else if (/\b(low priority|whenever|someday|no rush)\b/i.test(lower)) {
+      priority = 'low';
+    } else if (kind === 'promise' && due && dayDiff(due) <= 2) {
+      priority = 'high';
+    } else if (matchedClient && starsOf(matchedClient) === 5) {
+      priority = 'high';
+    }
+
+    // Clean title
+    let title = line
+      .replace(/^(task|meeting|promise|payment|note|glitch|reel):\s*/i, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (title.length > 70) title = title.slice(0, 67) + '…';
+    if (!title) title = line.slice(0, 70);
+
+    const it = makeItem({
+      kind,
+      title,
+      client: clientId,
+      biz: bizId,
+      person,
+      due,
+      time,
+      priority,
+      amount,
+      notes: line !== title ? line : ''
+    });
+
+    if (it.kind === 'glitch' || it.kind === 'reel') {
+      it.biz = productBiz();
+      it.client = '';
+      it.stage = it.kind === 'glitch' ? 'todo' : 'idea';
+    }
+    it._cal = it.kind === 'meeting' || ((it.kind === 'promise' || it.kind === 'payment' || it.priority === 'high' || it.time) && !!it.due);
+    parsedItems.push(it);
+  }
+
+  const counts = {};
+  for (const it of parsedItems) counts[it.kind] = (counts[it.kind] || 0) + 1;
+  const summaryParts = Object.entries(counts).map(([k, n]) => `${n} ${KIND_LABEL[k] || k}${n > 1 ? 's' : ''}`);
+  const summary = `Found ${parsedItems.length} item${parsedItems.length > 1 ? 's' : ''} (${summaryParts.join(', ')}).`;
+
+  return { summary, items: parsedItems };
+}
+
 async function organise() {
   const text = $('#dump').value.trim();
   if (!text) { toast('Type or dictate something first.'); $('#dump').focus(); return; }
-  const sample = await useCap('sample');
-  if (!sample) { quickTask(); toast('Sorting works when Command is opened from claude.ai. Saved it as one task.'); return; }
   const card = $('#dump-card'); card.classList.add('busy');
   const btn = $('#organise'); btn.disabled = true; $('#dump-state').textContent = 'Sorting…';
-  const prompt = `You organise raw notes for Rahul, a 17-year-old who runs a marketing agency in India. Now: ${nowStamp()}.
+
+  const sample = await useCap('sample');
+  if (sample) {
+    const prompt = `You organise raw notes for Rahul, a 17-year-old who runs a marketing agency in India. Now: ${nowStamp()}.
 His clients (use the id): ${JSON.stringify(clientsForAI())}
 
 Split the notes below into separate items. Kinds:
@@ -44,20 +231,43 @@ NOTES:
 """
 ${text}
 """`;
+    try {
+      const out = await sample.json(prompt, { modelTier: 'default', cache: false });
+      const items = (out && Array.isArray(out.items) ? out.items : []).filter(x => x && x.title).map(x => {
+        const it = makeItem(x);
+        if (!['task','meeting','promise','payment','note','glitch','reel'].includes(x.kind)) it.kind = 'task';
+        if (it.kind === 'glitch' || it.kind === 'reel') { it.biz = productBiz(); it.client = ''; it.stage = it.kind === 'glitch' ? 'todo' : 'idea'; }
+        if (it.client && !clientById(it.client)) it.client = '';
+        it._cal = it.kind === 'meeting' || ((it.kind === 'promise' || it.kind === 'payment' || it.priority === 'high' || it.time) && !!it.due);
+        return it;
+      });
+      if (items.length) {
+        S.review = { summary: out.summary || '', items };
+        renderReview();
+        return;
+      }
+    } catch (e) {
+      console.warn('AI sample error, falling back to local organizer:', e);
+    } finally {
+      card.classList.remove('busy'); btn.disabled = false; $('#dump-state').textContent = '';
+    }
+  }
+
+  // Standalone smart local parser (works all the time without claude.ai)
   try {
-    const out = await sample.json(prompt, { modelTier: 'default', cache: false });
-    const items = (out && Array.isArray(out.items) ? out.items : []).filter(x => x && x.title).map(x => {
-      const it = makeItem(x);
-      if (!['task','meeting','promise','payment','note','glitch','reel'].includes(x.kind)) it.kind = 'task';
-      if (it.kind === 'glitch' || it.kind === 'reel') { it.biz = productBiz(); it.client = ''; it.stage = it.kind === 'glitch' ? 'todo' : 'idea'; }
-      if (it.client && !clientById(it.client)) it.client = '';
-      it._cal = it.kind === 'meeting' || ((it.kind === 'promise' || it.kind === 'payment' || it.priority === 'high' || it.time) && !!it.due);
-      return it;
-    });
-    if (!items.length) { toast('I could not find anything to add in that.'); }
-    else { S.review = { summary: out.summary || '', items }; renderReview(); }
-  } catch (e) { toast(sampleErr(e)); }
-  finally { card.classList.remove('busy'); btn.disabled = false; $('#dump-state').textContent = ''; }
+    const out = parseNotesLocally(text);
+    if (!out.items.length) {
+      quickTask();
+    } else {
+      S.review = out;
+      renderReview();
+    }
+  } catch (err) {
+    console.error(err);
+    quickTask();
+  } finally {
+    card.classList.remove('busy'); btn.disabled = false; $('#dump-state').textContent = '';
+  }
 }
 function renderReview() {
   const box = $('#review');
@@ -110,9 +320,9 @@ function quickTask() {
 
 /* ---- plan my day ---- */
 async function planDay() {
+  const btn = $('#plan-btn'); if (btn) { btn.disabled = true; btn.lastChild.textContent = 'Planning…'; }
   const sample = await useCap('sample');
-  if (!sample) { toast('This works when Command is opened from claude.ai.'); return; }
-  const btn = $('#plan-btn'); btn.disabled = true; btn.lastChild.textContent = 'Planning…';
+  if (!sample) { if (btn) { btn.disabled = false; btn.lastChild.textContent = 'Plan'; } return; }
   $('#dump-card').classList.add('busy');
   const t = today(), tm = addDays(t, 1);
   const meetings = S.events.filter(e => e.day === t || e.day === tm).map(e => ({ day: e.day, time: e.time || 'all day', end: e.endTime, title: e.title }));
@@ -130,12 +340,13 @@ Return JSON only: {"for":"today|tomorrow","blocks":[{"start":"HH:MM","end":"HH:M
     S.plan = { ...out, blocks: (out.blocks || []).filter(b => validTime(b.start) && validTime(b.end)), date: out.for === 'tomorrow' ? tm : t, made: Date.now(), blocked: false };
     lsSet('cmd.plan', S.plan); renderPlan();
   } catch (e) { toast(sampleErr(e)); }
-  finally { btn.disabled = false; btn.lastChild.textContent = 'Plan'; $('#dump-card').classList.remove('busy'); }
+  finally { if (btn) { btn.disabled = false; btn.lastChild.textContent = 'Plan'; } $('#dump-card').classList.remove('busy'); }
 }
 function renderPlan() {
   const p = S.plan, box = $('#plan');
-  if (!p || !p.blocks || (p.date !== today() && p.date !== addDays(today(), 1)) || (p.date !== today() && p.for !== 'tomorrow')) { box.innerHTML = ''; $('#plan-intro').hidden = false; return; }
-  $('#plan-intro').hidden = true;
+  if (!box) return;
+  if (!p || !p.blocks || (p.date !== today() && p.date !== addDays(today(), 1)) || (p.date !== today() && p.for !== 'tomorrow')) { box.innerHTML = ''; if ($('#plan-intro')) $('#plan-intro').hidden = false; return; }
+  if ($('#plan-intro')) $('#plan-intro').hidden = true;
   box.innerHTML = `<div style="display:flex;flex-direction:column;gap:12px">
     ${p.tip ? `<div class="tip">${esc(p.tip)}</div>` : ''}
     <div class="faint" style="font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase">${p.date === today() ? 'Today' : 'Tomorrow'}</div>
@@ -144,69 +355,121 @@ function renderPlan() {
     <div style="display:flex;gap:10px;flex-wrap:wrap">${p.blocked ? '<span class="faint" style="font-size:12.5px">Added to your calendar</span>' : '<button class="btn small" id="plan-block">Add focus blocks to Calendar</button>'}</div>
   </div>`;
 }
-async function blockPlan() {
-  const mcp = await useCap('mcp');
-  if (!mcp) { toast('Google Calendar works when Command is opened from claude.ai.'); return; }
-  const btn = $('#plan-block'); if (btn) { btn.disabled = true; btn.textContent = 'Adding…'; }
-  let ok = 0;
-  for (const b of S.plan.blocks.filter(b => b.type === 'focus' || b.type === 'admin')) {
-    try {
-      await mcp.callTool('Google Calendar', 'create_event', { summary: 'Focus: ' + b.title, startTime: isoAt(S.plan.date, b.start), endTime: isoAt(S.plan.date, b.end), timeZone: TZ, availability: 'AVAILABILITY_BUSY', description: 'Planned by Command', overrideReminders: [{ method:'popup', minutes:5 }] });
-      ok++;
-    } catch (e) { toast(calErr(e)); break; }
+
+function askLocally(q) {
+  const query = (q || '').trim().toLowerCase();
+  const t = today();
+  const open = openItems();
+  const clList = clients();
+  const bizList = businesses();
+  const dueToday = open.filter(i => i.due === t);
+  const late = open.filter(isLate);
+  const allPromises = open.filter(i => i.kind === 'promise');
+  const totalRev = S.items.filter(i => i.kind === 'payment' && i.status === 'done').reduce((s, i) => s + (i.amount || 0), 0);
+  const pendingRev = open.filter(i => i.kind === 'payment').reduce((s, i) => s + (i.amount || 0), 0);
+  const totalRetainers = clList.reduce((s, c) => s + (Number(c.retainer) || 0), 0);
+
+  if (query.includes('today') || query.includes('doing') || query.includes('schedule') || query.includes('what to do') || query.includes('what\'s on')) {
+    if (!dueToday.length && !late.length) {
+      return `You have **nothing due today** and nothing overdue. Great time to get ahead on upcoming client work!`;
+    }
+    let res = `Here's what is on your plate today:\n`;
+    if (late.length) res += `- **${late.length} overdue item${late.length > 1 ? 's' : ''}** needing attention\n`;
+    dueToday.forEach(i => {
+      const c = clientById(i.client);
+      res += `- **${esc(i.title)}** (${KIND_LABEL[i.kind]}${c ? ' · ' + (c.short || c.name) : ''}${i.time ? ' · ' + fmtTime(i.time) : ''})\n`;
+    });
+    return res;
   }
-  if (ok) { S.plan.blocked = true; lsSet('cmd.plan', S.plan); toast(`${ok} focus block${ok > 1 ? 's' : ''} added to Google Calendar.`); loadCalendar(true); }
-  renderPlan();
+
+  if (query.includes('overdue') || query.includes('late') || query.includes('behind')) {
+    if (!late.length) return `**Nothing overdue!** All clear on deadlines.`;
+    let res = `You have **${late.length} overdue item${late.length > 1 ? 's' : ''}**:\n`;
+    late.forEach(i => {
+      const c = clientById(i.client);
+      res += `- **${esc(i.title)}** (due ${fmtDate(i.due)}${c ? ' · ' + (c.short || c.name) : ''})\n`;
+    });
+    return res;
+  }
+
+  if (query.includes('promise') || query.includes('word') || query.includes('vow') || query.includes('committed')) {
+    if (!allPromises.length) return `No open promises right now. Add one when you give someone your word.`;
+    let res = `You have **${allPromises.length} open promise${allPromises.length > 1 ? 's' : ''}**:\n`;
+    allPromises.forEach(p => {
+      res += `- **${esc(p.title)}** (for ${esc(p.person || 'client')}${p.due ? ', due ' + fmtDate(p.due) : ''})\n`;
+    });
+    return res;
+  }
+
+  if (query.includes('revenue') || query.includes('money') || query.includes('earn') || query.includes('payment') || query.includes('retainer') || query.includes('income')) {
+    let res = `Here's your financial overview:\n`;
+    res += `- **Total received revenue:** ${inr(totalRev)}\n`;
+    res += `- **Monthly retainers:** ${inr(totalRetainers)} / month across ${clList.length} client${clList.length === 1 ? '' : 's'}\n`;
+    if (pendingRev > 0) res += `- **Pending payments:** ${inr(pendingRev)}\n`;
+    return res;
+  }
+
+  if (query.includes('client') || query.includes('clients') || query.includes('who are my client')) {
+    if (!clList.length) return `You don't have any clients added yet. Tap **New client** in Businesses to add one!`;
+    let res = `You have **${clList.length} client${clList.length > 1 ? 's' : ''}**:\n`;
+    clList.forEach(c => {
+      const rev = clientRevenue(c.id);
+      res += `- **${esc(c.name)}** (${starsOf(c)}★) — Retainer: ${c.retainer ? inr(c.retainer) : '—'}, Earned: ${inr(rev)}\n`;
+    });
+    return res;
+  }
+
+  if (query.includes('best client') || query.includes('top client') || query.includes('highest')) {
+    if (!clList.length) return `No clients found.`;
+    const topByRev = [...clList].sort((a,b) => clientRevenue(b.id) - clientRevenue(a.id))[0];
+    const topByStars = [...clList].sort((a,b) => starsOf(b) - starsOf(a))[0];
+    return `Your top client by rating is **${esc(topByStars.name)}** (${starsOf(topByStars)}★). Most revenue earned is from **${esc(topByRev.name)}** (${inr(clientRevenue(topByRev.id))}).`;
+  }
+
+  if (query.includes('business') || query.includes('agency') || query.includes('companies')) {
+    let res = `You are running **${bizList.length} businesses**:\n`;
+    bizList.forEach(b => {
+      const cl = bizClients(b.id);
+      res += `- **${esc(b.name)}** (${b.kind === 'product' ? 'Product / App' : 'Agency'}${cl.length ? ' · ' + cl.length + ' clients' : ''})\n`;
+    });
+    return res;
+  }
+
+  if (query.includes('streak') || query.includes('progress')) {
+    return `Your systems are running. Check the streak bar on the home screen to see your daily consistency!`;
+  }
+
+  const summaryDue = dueToday.length ? `${dueToday.length} due today` : 'nothing due today';
+  const summaryLate = late.length ? `${late.length} overdue` : 'nothing overdue';
+  return `I'm Command, your personal command center assistant.\n\nCurrently you have **${open.length} open task${open.length !== 1 ? 's' : ''}** (${summaryDue}, ${summaryLate}), **${clList.length} active client${clList.length !== 1 ? 's' : ''}**, and **${inr(totalRetainers)}** in monthly retainers.\n\nAsk me about your **tasks for today**, **overdue items**, **clients**, or **revenue** anytime!`;
 }
 
-/* ---- ask ---- */
-function buildContext() {
-  const t = today();
-  const slim = i => ({ kind: i.kind, title: i.title, client: clientById(i.client)?.name || '', person: i.person || undefined, due: i.due || undefined, time: i.time || undefined, priority: i.priority, amount: i.amount || undefined, notes: i.notes ? i.notes.slice(0, 200) : undefined });
-  const recentDone = S.items.filter(i => i.status === 'done' && i.doneAt && Date.now() - i.doneAt < 14 * 864e5).map(slim);
-  return `You are Command, Rahul's personal assistant inside his own app. Rahul is 17 and runs a marketing agency in India. Talk like a sharp, warm friend: brief and direct. Use ₹ with Indian grouping. Use short bullet lists ("- ") when listing things and **bold** for key items. No headings. Only use the data below; if something isn't there, say so.
-Now: ${nowStamp()}
-Settings: work day ${S.settings.dayStart}-${S.settings.dayEnd}, sharpest hours ${S.settings.peakStart}-${S.settings.peakEnd}
-Clients (importance out of 5 stars): ${JSON.stringify(clients().map(c => ({ name: c.name, stars: starsOf(c), retainerPerMonth: c.retainer || 0, revenueReceived: clientRevenue(c.id), contractSigned: c.signed || '', note: c.note || '' })))}
-Open items (overdue if due < ${t}): ${JSON.stringify(openItems().map(slim))}
-Done in last 14 days: ${JSON.stringify(recentDone)}
-Calendar next 7 days: ${JSON.stringify(S.events.map(e => ({ day: e.day, time: e.time || 'all day', title: e.title })))}
-Savings goals (Revolut pockets): ${JSON.stringify((S.settings.goals || []).map(g => ({ name: g.name, target: g.target, saved: g.saved, date: g.date })))}`;
-}
-function md(s) {
-  const lines = esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').split('\n');
-  let out = '', inList = false;
-  for (const l of lines) {
-    const m = l.match(/^\s*[-•*]\s+(.*)/);
-    if (m) { if (!inList) { out += '<ul>'; inList = true; } out += `<li>${m[1]}</li>`; }
-    else { if (inList) { out += '</ul>'; inList = false; } out += l.trim() ? `<p>${l}</p>` : ''; }
-  }
-  return out + (inList ? '</ul>' : '');
-}
-function renderChat() {
-  $('#v-ask').classList.toggle('chatting', S.chat.length > 0);
-  $('#chat').innerHTML = S.chat.length ? S.chat.map(m => m.role === 'user' ? `<div class="msg me">${esc(m.content)}</div>` :
-    `<div class="msg ai ${m.error ? 'err' : ''}">${m.content ? md(m.content) : '<span class="faint">…</span>'}</div>`).join('') :
-    '';
-  const last = $('#chat').lastElementChild; if (last && S.chat.length) last.scrollIntoView({ block:'nearest' });
-}
 let askCtl = null;
 async function ask(q) {
   q = (q || '').trim(); if (!q) return;
-  const sample = await useCap('sample');
-  if (!sample) { toast('This works when Command is opened from claude.ai.'); return; }
   S.chat.push({ role:'user', content:q });
   const reply = { role:'assistant', content:'', pending:true }; S.chat.push(reply); renderChat();
-  const turns = [];
-  const ctx = buildContext();
-  S.chat.filter(m => !m.pending && !m.error).forEach((m, i) => turns.push({ role: m.role, content: i === 0 ? `${ctx}\n\nRahul asks: ${m.content}` : m.content }));
-  askCtl = new AbortController();
-  try {
-    const r = await sample(turns, { cache:false, signal: askCtl.signal, onText: ({ text }) => { reply.content = text; renderChat(); } });
-    reply.content = r.text;
-  } catch (e) {
-    if (e && e.code === 'cancelled') { S.chat.splice(S.chat.indexOf(reply), 1); }
-    else { reply.error = true; reply.content = (e && e.text ? e.text + '\n\n' : '') + sampleErr(e); }
+
+  const sample = await useCap('sample');
+  if (sample) {
+    const turns = [];
+    const ctx = buildContext();
+    S.chat.filter(m => !m.pending && !m.error).forEach((m, i) => turns.push({ role: m.role, content: i === 0 ? `${ctx}\n\nRahul asks: ${m.content}` : m.content }));
+    askCtl = new AbortController();
+    try {
+      const r = await sample(turns, { cache:false, signal: askCtl.signal, onText: ({ text }) => { reply.content = text; renderChat(); } });
+      reply.content = r.text;
+      reply.pending = false;
+      renderChat();
+      return;
+    } catch (e) {
+      if (e && e.code === 'cancelled') { S.chat.splice(S.chat.indexOf(reply), 1); renderChat(); return; }
+      console.warn('AI sample ask error, falling back to local assistant:', e);
+    }
   }
-  reply.pending = false; renderChat();
+
+  // Standalone assistant (works all the time without claude.ai)
+  reply.content = askLocally(q);
+  reply.pending = false;
+  renderChat();
 }

@@ -160,10 +160,52 @@ function editWish(id) {
     if (del) del.onclick = () => { if (del.dataset.sure) { S.settings.wishlist = S.settings.wishlist.filter(x => x.id !== w.id); closeSheet(); saveSettings(); } else { del.dataset.sure = '1'; del.textContent = 'Tap again to delete'; } };
   });
 }
+function openProfileSheet() {
+  const pid = S.profileId || 'rahul';
+  openSheet(`<h2>Switch Profile</h2>
+    <p class="muted" style="font-size:13px;margin-bottom:16px">Select an active profile to switch workspace context, businesses, and clients.</p>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      ${PROFILES.map(p => {
+        const isActive = p.id === pid;
+        const defs = defaultSettingsFor(p.id);
+        const saved = lsGet(`cmd.settings_${p.id}`, null) || (p.id === 'rahul' ? lsGet('cmd.settings', null) : null) || {};
+        const profSettings = { ...defs, ...saved };
+        const bizList = profSettings.businesses || [];
+        const bizNames = bizList.map(b => b.name).join(', ');
+        return `<button class="card prof-card" data-switchprofile="${p.id}" style="padding:14px 16px;text-align:left;display:flex;align-items:center;gap:14px;cursor:pointer;border:1px solid ${isActive ? 'var(--ink)' : 'var(--hair)'}">
+          <span class="pfp" style="width:38px;height:38px;font-size:16px;display:grid;place-items:center;background:${isActive ? 'var(--ink)' : 'var(--surface-3)'};color:${isActive ? 'var(--bg)' : 'var(--ink)'};border-radius:50%;flex:none;font-weight:700">${p.avatarLetter}</span>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:8px">
+              <b style="font-size:15px">${esc(profSettings.name || p.name)}</b>
+              ${isActive ? '<span class="chip" style="font-size:11px;height:20px;padding:0 6px">Active</span>' : ''}
+            </div>
+            <div class="muted" style="font-size:12px">${esc(profSettings.email || p.email)}</div>
+            <div class="faint" style="font-size:12px;margin-top:2px">Businesses: ${esc(bizNames)}</div>
+          </div>
+        </button>`;
+      }).join('')}
+    </div>
+    <div class="sheet-actions" style="margin-top:20px">
+      <button class="btn" id="prof-edit" type="button"><svg><use href="#i-gear"/></svg>Settings</button>
+      <button class="btn primary" id="prof-done" type="button">Close</button>
+    </div>`, sh => {
+    sh.querySelector('#prof-done').onclick = closeSheet;
+    sh.querySelector('#prof-edit').onclick = () => { closeSheet(); editSettings(); };
+  });
+}
+
 function editSettings() {
   const st = S.settings;
+  const pid = S.profileId || 'rahul';
   openSheet(`<h2>Settings</h2>
+    <div class="field" style="margin-bottom:14px">
+      <label style="display:block;margin-bottom:6px">Active Profile</label>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+        ${PROFILES.map(p => `<button type="button" class="btn small ${p.id === pid ? 'primary' : ''}" data-switchprofile="${p.id}">${esc(p.name)}</button>`).join('')}
+      </div>
+    </div>
     <div class="field"><label for="s-name">Your name</label><input class="in" id="s-name" value="${esc(st.name)}"></div>
+    <div class="field"><label for="s-email">Email</label><input class="in" id="s-email" value="${esc(st.email || '')}"></div>
     <div class="frow">
       <div class="field"><label for="s-ds">Work day starts</label><input class="in" type="time" id="s-ds" value="${st.dayStart}"></div>
       <div class="field"><label for="s-de">Work day ends</label><input class="in" type="time" id="s-de" value="${st.dayEnd}"></div>
@@ -172,12 +214,13 @@ function editSettings() {
       <div class="field"><label for="s-ps">Sharpest from</label><input class="in" type="time" id="s-ps" value="${st.peakStart}"></div>
       <div class="field"><label for="s-pe">Sharpest until</label><input class="in" type="time" id="s-pe" value="${st.peakEnd}"></div>
     </div>
-    <div class="cal-note" style="margin:0">${S.mode === 'cloud' ? 'Your data syncs between your iPhone and your Mac through claude.ai.' : 'Your data is only saved in this browser. Open Command from claude.ai to sync it across devices.'}<br>Google Calendar: ${S.cal.state === 'ok' ? 'connected' : esc(calNote() || 'not connected')}</div>
+    <div class="cal-note" style="margin:0">${S.mode === 'cloud' ? 'Your data syncs across your devices.' : 'Your data is saved securely in your browser.'}<br>Calendar: ${S.cal.state === 'ok' ? 'active' : 'ready'}</div>
     <div class="sheet-actions"><button class="btn danger left" id="s-reset" type="button">Reset businesses & data</button><button class="btn" id="s-cancel">Cancel</button><button class="btn primary" id="s-save">Save</button></div>`, sh => {
     sh.querySelector('#s-cancel').onclick = closeSheet;
     sh.querySelector('#s-reset').onclick = () => { closeSheet(); resetToDefaults(); };
     sh.querySelector('#s-save').onclick = () => {
       st.name = $('#s-name').value.trim() || 'Rahul';
+      if ($('#s-email')) st.email = $('#s-email').value.trim();
       ['dayStart:s-ds','dayEnd:s-de','peakStart:s-ps','peakEnd:s-pe'].forEach(p => { const [k, id] = p.split(':'); const v = $('#' + id).value; if (validTime(v)) st[k] = v; });
       closeSheet(); saveSettings(); toast('Settings saved.');
     };

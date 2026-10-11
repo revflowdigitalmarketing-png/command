@@ -27,26 +27,30 @@ function normEvent(e) {
 }
 async function loadCalendar(fresh) {
   const mcp = await useCap('mcp');
-  if (!mcp) { S.cal = { state:'off' }; render(); return; }
-  if (fresh) { S.cal = { state:'loading' }; render(); }
-  try {
-    const t = today();
-    const r = await mcp.callTool('Google Calendar', 'list_events', {
-      startTime: isoAt(t, '00:00'), endTime: isoAt(addDays(t, 8), '00:00'), orderBy: 'startTime', timeZone: TZ, pageSize: 100
-    }, fresh ? { cache: { refresh: true, staleTime: 60000 } } : { cache: { staleTime: 60000 } });
-    const p = r && (r.payload ?? null);
-    const list = Array.isArray(p) ? p : (p && (p.events || p.items || p.data)) || [];
-    S.events = list.map(normEvent).filter(Boolean);
-    S.cal = { state:'ok' };
-  } catch (e) {
-    S.cal = { state: (e && e.code) || 'error', msg: calErr(e) };
-    if (e && ['needs_reauth','server_not_connected','not_in_manifest','blocked_by_policy'].includes(e.code)) S.events = [];
+  if (mcp) {
+    if (fresh) { S.cal = { state:'loading' }; render(); }
+    try {
+      const t = today();
+      const r = await mcp.callTool('Google Calendar', 'list_events', {
+        startTime: isoAt(t, '00:00'), endTime: isoAt(addDays(t, 8), '00:00'), orderBy: 'startTime', timeZone: TZ, pageSize: 100
+      }, fresh ? { cache: { refresh: true, staleTime: 60000 } } : { cache: { staleTime: 60000 } });
+      const p = r && (r.payload ?? null);
+      const list = Array.isArray(p) ? p : (p && (p.events || p.items || p.data)) || [];
+      S.events = list.map(normEvent).filter(Boolean);
+      S.cal = { state:'ok' };
+    } catch (e) {
+      S.cal = { state: (e && e.code) || 'error', msg: calErr(e) };
+      if (e && ['needs_reauth','server_not_connected','not_in_manifest','blocked_by_policy'].includes(e.code)) S.events = [];
+    }
+    render();
+    return;
   }
+  // Standalone: load stored local calendar events
+  S.events = lsGet('cmd.events', []) || [];
+  S.cal = { state:'ok', msg:'' };
   render();
 }
 async function pushToCalendar(it, quiet) {
-  const mcp = await useCap('mcp');
-  if (!mcp) { toast('Google Calendar works when Command is opened from claude.ai.'); return false; }
   if (!validDate(it.due)) { toast('Give it a date first.'); return false; }
   const timed = validTime(it.time);
   const start = timed ? it.time : '10:00';
@@ -54,19 +58,51 @@ async function pushToCalendar(it, quiet) {
   const end = plusMin(it.due, start, dur);
   const c = clientById(it.client);
   const prefix = { promise:'Promise: ', payment:'Collect payment: ', task: timed ? '' : 'Due: ', meeting:'', reel:'Post reel: ', glitch:'Fix: ' }[it.kind] || '';
-  const input = {
-    summary: prefix + it.title + (c ? ` · ${c.short || c.name}` : ''),
-    startTime: isoAt(it.due, start), endTime: isoAt(end.date, end.time), timeZone: TZ,
-    description: [it.person ? `For: ${it.person}` : '', it.amount ? `Amount: ${inr(it.amount)}` : '', it.notes || '', 'Added from Command'].filter(Boolean).join('\n'),
-    overrideReminders: timed ? [{ method:'popup', minutes:30 }, { method:'popup', minutes:5 }] : [{ method:'popup', minutes:0 }, { method:'popup', minutes:1440 }]
+  const summary = prefix + it.title + (c ? ` · ${c.short || c.name}` : '');
+  const desc = [it.person ? `For: ${it.person}` : '', it.amount ? `Amount: ${inr(it.amount)}` : '', it.notes || '', 'Added from Command'].filter(Boolean).join('\n');
+
+  const mcp = await useCap('mcp');
+  if (mcp) {
+    const input = {
+      summary,
+      startTime: isoAt(it.due, start), endTime: isoAt(end.date, end.time), timeZone: TZ,
+      description: desc,
+      overrideReminders: timed ? [{ method:'popup', minutes:30 }, { method:'popup', minutes:5 }] : [{ method:'popup', minutes:0 }, { method:'popup', minutes:1440 }]
+    };
+    try {
+      const r = await mcp.callTool('Google Calendar', 'create_event', input);
+      const p = (r && r.payload) || {};
+      const ev = p.event || p;
+      it.cal = { id: ev.id || ev.eventId || '', link: ev.htmlLink || ev.link || '' };
+      await saveItem(it);
+      if (!quiet) toast('Added to Google Calendar. Your iPhone will remind you.');
+      return true;
+    } catch (e) { toast(calErr(e)); return false; }
+  }
+
+  // Standalone: add to local calendar events and generate Google Calendar web link
+  const startIso = (it.due + 'T' + start + ':00').replace(/[-:]/g, '');
+  const endIso = (end.date + 'T' + end.time + ':00').replace(/[-:]/g, '');
+  const gcalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(summary)}&dates=${startIso}/${endIso}&details=${encodeURIComponent(desc)}`;
+
+  const evId = 'ev-' + Date.now();
+  const localEv = {
+    id: evId,
+    title: summary,
+    day: it.due,
+    time: timed ? start : '',
+    endTime: timed ? end.time : '',
+    allDay: !timed,
+    link: gcalUrl,
+    location: ''
   };
-  try {
-    const r = await mcp.callTool('Google Calendar', 'create_event', input);
-    const p = (r && r.payload) || {};
-    const ev = p.event || p;
-    it.cal = { id: ev.id || ev.eventId || '', link: ev.htmlLink || ev.link || '' };
-    await saveItem(it);
-    if (!quiet) toast('Added to Google Calendar. Your iPhone will remind you.');
-    return true;
-  } catch (e) { toast(calErr(e)); return false; }
+  const list = lsGet('cmd.events', []) || [];
+  list.push(localEv);
+  lsSet('cmd.events', list);
+  S.events = list;
+  it.cal = { id: evId, link: gcalUrl };
+  await saveItem(it);
+  if (!quiet) toast('Added to calendar.');
+  render();
+  return true;
 }

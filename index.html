@@ -51,7 +51,7 @@
     <button class="nav-btn" data-go="ask"><svg><use href="#i-spark"/></svg>Ask</button>
     <div class="side-label">OTHER</div>
     <button class="nav-btn" data-action="settings"><svg><use href="#i-gear"/></svg>Settings</button>
-    <button class="profile" type="button" data-action="settings"><span class="pfp" aria-hidden="true"></span><span class="pn"><b id="side-name">Rahul</b><small>rahulchandrakondamu@gmail.com</small></span></button>
+    <button class="profile" type="button" data-action="profiles" aria-label="Switch profile"><span class="pfp" id="side-pfp" aria-hidden="true">R</span><span class="pn"><b id="side-name">Rahul</b><small id="side-email">rahulchandrakondamu@gmail.com</small></span></button>
   </aside>
 
   <main class="main">
@@ -79,7 +79,6 @@
           <button type="button" data-fill="meeting">Meeting notes</button>
           <button type="button" data-fill="promise">A promise I made</button>
           <button type="button" data-fill="payment">Payment update</button>
-          <button type="button" data-fill="plan">Plan my day</button>
         </div>
         <div class="status-line" id="status-line"></div>
         <div class="review" id="review" hidden></div>
@@ -114,20 +113,9 @@
             <div class="tl" id="timeline"></div>
           </div>
 
-          <div class="plan" id="plan-card">
-            <div class="sec-head"><h2>Plan my day</h2><button class="btn small" id="plan-btn">Plan</button></div>
-            <p class="muted" style="font-size:13px" id="plan-intro">Fits your open tasks around today's meetings, hardest work in your best hours.</p>
-            <div id="plan"></div>
-          </div>
-
           <div>
             <div class="sec-head"><h2>My Word</h2><button class="link" data-go="word">See all</button></div>
             <div class="list" id="word-mini" style="margin-top:12px"></div>
-          </div>
-
-          <div>
-            <div class="sec-head"><h2>Trips</h2><button class="link" data-go="money">Money</button></div>
-            <div class="list" id="trips-mini" style="margin-top:12px"></div>
           </div>
         </div>
       </div>
@@ -271,7 +259,7 @@
       </div>
       <div class="hero">
         <div class="banner" role="img" aria-label="Open field at golden hour with a parked car"></div>
-        <h1 class="hero-q">At your service, Rahul. <span>What do you want to know?</span></h1>
+        <h1 class="hero-q" id="ask-hero">At your service, Rahul. <span>What do you want to know?</span></h1>
         <form class="prompt" id="ask-form" autocomplete="off">
           <textarea id="ask-in" aria-label="Question" placeholder="Ask about your clients, deadlines, promises or money…"></textarea>
           <div class="prompt-bar">
@@ -303,6 +291,7 @@
 <div class="side-scrim" id="side-scrim"></div>
 <div class="scrim" id="scrim" hidden><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
 <div class="toast" id="toast" hidden></div>
+<div id="world-portal" class="world-portal" hidden aria-hidden="true"></div>
 
 <script src="js/core.js"></script>
 <script src="js/home.js"></script>

@@ -52,24 +52,105 @@ const sortItems = arr => arr.sort((a, b) => {
   return (a.time || '99') < (b.time || '99') ? -1 : 1;
 });
 
+function updateProfileCrumbs() {
+  const pid = S.profileId || 'rahul';
+  const nm = S.settings.name || (pid === 'sri-chandana' ? 'Sri Chandana' : pid === 'adithya' ? 'Adithya' : 'Rahul');
+  const em = S.settings.email || (nm.toLowerCase().replace(/\s+/g, '') + '@gmail.com');
+  const sideName = $('#side-name'); if (sideName) sideName.textContent = nm;
+  const sideEmail = $('#side-email'); if (sideEmail) sideEmail.textContent = em;
+  const sidePfp = $('#side-pfp'); if (sidePfp) sidePfp.textContent = nm.slice(0, 1).toUpperCase();
+  document.title = `${nm}'s Command`;
+  document.body.dataset.profile = pid;
+  $$('.crumb').forEach(c => {
+    c.innerHTML = c.innerHTML.replace(/^[^/<]+(?=\s*\/)/, esc(nm));
+  });
+  const askHero = $('#ask-hero');
+  if (askHero) {
+    if (pid === 'sri-chandana') {
+      askHero.innerHTML = `At your service, Sri Chandana. <span>What can I help you accomplish today?</span>`;
+    } else if (pid === 'adithya') {
+      askHero.innerHTML = `Ready when you are, Adithya. <span>What strategy or content are we reviewing?</span>`;
+    } else {
+      askHero.innerHTML = `At your service, ${esc(nm)}. <span>What do you want to know?</span>`;
+    }
+  }
+}
+
 function renderHome() {
   const h = new Date().getHours();
-  const nm = S.settings.name || 'Rahul';
+  const pid = S.profileId || 'rahul';
+  const nm = S.settings.name || (pid === 'sri-chandana' ? 'Sri Chandana' : pid === 'adithya' ? 'Adithya' : 'Rahul');
+  updateProfileCrumbs();
   $('#greet').textContent = new Date().toLocaleDateString('en-IN',{weekday:'long', day:'numeric', month:'long'});
-  $('#side-name').textContent = nm;
-  $('#hero-q').innerHTML = h < 5 ? `Still up, ${esc(nm)}? <span>Get it out of your head.</span>` : h < 12 ? `Good morning, ${esc(nm)}. <span>Systems are up. What's first?</span>` : h < 17 ? `Good afternoon, ${esc(nm)}. <span>What needs handling?</span>` : `Good evening, ${esc(nm)}. <span>Let's close out the day.</span>`;
+
+  // Tailored 2-line greetings per profile
+  let greetingHtml = '';
+  if (pid === 'sri-chandana') {
+    if (h < 5) {
+      greetingHtml = `Still awake, Sri Chandana? <span>Inner peace awaits. Let the mind rest.</span>`;
+    } else if (h < 12) {
+      greetingHtml = `Good morning, Sri Chandana. <span>There is no secret ingredient — today is yours.</span>`;
+    } else if (h < 17) {
+      greetingHtml = `Good afternoon, Sri Chandana. <span>Mastery in every action. What's next?</span>`;
+    } else {
+      greetingHtml = `Good evening, Sri Chandana. <span>A day well fought. Rest and recharge.</span>`;
+    }
+  } else if (pid === 'adithya') {
+    if (h < 5) {
+      greetingHtml = `Late night grind, Adithya? <span>Finalize the cuts and queue the drops.</span>`;
+    } else if (h < 12) {
+      greetingHtml = `Good morning, Adithya. <span>High retention, high impact. What's next?</span>`;
+    } else if (h < 17) {
+      greetingHtml = `Good afternoon, Adithya. <span>Campaigns are live. Keep momentum high.</span>`;
+    } else {
+      greetingHtml = `Good evening, Adithya. <span>Wrap deliverables and prep tomorrow.</span>`;
+    }
+  } else {
+    // rahul
+    if (h < 5) {
+      greetingHtml = `Still up, ${esc(nm)}? <span>Get it out of your head and into Command.</span>`;
+    } else if (h < 12) {
+      greetingHtml = `Good morning, ${esc(nm)}. <span>Systems are up. What moves the needle today?</span>`;
+    } else if (h < 17) {
+      greetingHtml = `Good afternoon, ${esc(nm)}. <span>Momentum is high. What needs handling?</span>`;
+    } else {
+      greetingHtml = `Good evening, ${esc(nm)}. <span>Close out strong and review today's wins.</span>`;
+    }
+  }
+  $('#hero-q').innerHTML = greetingHtml;
+
+  // Custom banner image per profile (Kung Fu Panda for Sri Chandana)
+  $$('.banner').forEach(b => {
+    if (pid === 'sri-chandana') {
+      b.style.backgroundImage = "url('assets/kung-fu-panda.jpg'), url('kung fu panda.jpg')";
+      b.style.backgroundPosition = "center 42%";
+      b.setAttribute('aria-label', "Sri Chandana's dashboard - Po meditating under the blooming peach blossom tree");
+    } else {
+      b.style.backgroundImage = "url('assets/banner.jpg')";
+      b.style.backgroundPosition = "center 58%";
+      b.setAttribute('aria-label', "Open field at golden hour with a parked car");
+    }
+  });
+
+  // Custom prompt placeholder per profile
+  const dumpEl = $('#dump');
+  if (dumpEl) {
+    if (pid === 'sri-chandana') {
+      dumpEl.placeholder = "Capture your thoughts, promises, tasks, and creative ideas…";
+    } else if (pid === 'adithya') {
+      dumpEl.placeholder = "Log content ideas, client notes, video deliverables, payments…";
+    } else {
+      dumpEl.placeholder = "Type or dictate your meeting notes, promises, payments…";
+    }
+  }
 
   const open = openItems();
   const t = today();
-  const late = open.filter(isLate);
   const dueToday = open.filter(i => i.due === t);
-  const lateP = late.filter(i => i.kind === 'promise');
   const todayEvents = S.events.filter(e => e.day === t);
   const chips = [];
   if (dueToday.length) chips.push(`<span class="chip warn">${dueToday.length} due today</span>`);
-  if (late.length) chips.push(`<span class="chip bad">${late.length} overdue${lateP.length ? ` · ${lateP.length} promise${lateP.length>1?'s':''}` : ''}</span>`);
   if (todayEvents.length) chips.push(`<span class="chip">${todayEvents.length} on calendar today</span>`);
-  if (!late.length && !dueToday.length) chips.push(`<span class="chip">Nothing overdue</span>`);
   $('#status-line').innerHTML = chips.join('');
 
   // clients rail
@@ -92,33 +173,26 @@ function renderHome() {
   const pr = sortItems(open.filter(i => i.kind === 'promise')).slice(0, 3);
   $('#word-mini').innerHTML = pr.length ? pr.map(i => taskRow(i)).join('') : `<div class="empty">No open promises. Add one when you give someone your word.</div>`;
 
-  // trips mini
-  const goals = S.settings.goals || [];
-  $('#trips-mini').innerHTML = goals.length ? goals.map(g => {
-    const pct = g.target ? Math.min(100, Math.round((g.saved || 0) / g.target * 100)) : 0;
-    return `<button class="card" data-goal="${g.id}" style="padding:14px 16px;text-align:left;display:flex;flex-direction:column;gap:10px">
-      <span style="display:flex;justify-content:space-between;gap:8px;align-items:baseline"><b style="font-size:15px">${esc(g.name)}</b>
-      <span class="mono muted" style="font-size:12.5px">${g.target ? `${inr(g.saved)} / ${inr(g.target)}` : 'Set a target'}</span></span>
-      <span class="bar"><i style="width:${pct}%"></i></span></button>`;
-  }).join('') : `<div class="empty">Add Dubai and Bali in Money to track your savings.</div>`;
+  // trips mini (if present)
+  const tm = $('#trips-mini');
+  if (tm) {
+    const goals = S.settings.goals || [];
+    tm.innerHTML = goals.length ? goals.map(g => {
+      const pct = g.target ? Math.min(100, Math.round((g.saved || 0) / g.target * 100)) : 0;
+      return `<button class="card" data-goal="${g.id}" style="padding:14px 16px;text-align:left;display:flex;flex-direction:column;gap:10px">
+        <span style="display:flex;justify-content:space-between;gap:8px;align-items:baseline"><b style="font-size:15px">${esc(g.name)}</b>
+        <span class="mono muted" style="font-size:12.5px">${g.target ? `${inr(g.saved)} / ${inr(g.target)}` : 'Set a target'}</span></span>
+        <span class="bar"><i style="width:${pct}%"></i></span></button>`;
+    }).join('') : `<div class="empty">Add Dubai and Bali in Money to track your savings.</div>`;
+  }
 
   renderStreak();
   renderDay();
 }
 function mainFolder(b) {
-  let meta;
-  if (b.kind === 'product') {
-    const g = S.items.filter(i => i.kind === 'glitch' && i.biz === b.id && i.stage !== 'fixed').length;
-    const wk = weekDays(0); const r = S.items.filter(i => i.kind === 'reel' && i.biz === b.id && wk.includes(i.due));
-    meta = `${g} glitch${g === 1 ? '' : 'es'} to fix · ${r.filter(i => i.stage === 'posted').length}/${r.length} reels posted`;
-  } else {
-    const cl = bizClients(b.id); const open = openItems().filter(i => cl.some(c => c.id === i.client) && i.kind !== 'note').length;
-    meta = `${cl.length} client${cl.length === 1 ? '' : 's'} · ${open} open · ${inr(bizRevenue(b.id))} earned`;
-  }
   return `<button class="mcard" data-biz="${b.id}">
     <span class="mfold" aria-hidden="true"><span class="m-l3"></span><span class="m-l2"></span>
       <span class="m-front"><span class="m-tag">${b.kind === 'product' ? 'APP IDEA' : 'AGENCY'}</span><span class="m-name">${esc(b.name)}</span></span></span>
-    <span class="m-meta"><b>${esc(b.tagline || (b.kind === 'product' ? 'App in progress' : 'Business'))}</b><span>${esc(meta)}</span></span>
   </button>`;
 }
 function weekDays(offset) {
@@ -241,8 +315,8 @@ const nowLine = t => `<div class="now"><span>${fmtTime(t)}</span><i></i></div>`;
 function calNote() {
   switch (S.cal.state) {
     case 'ok': return '';
-    case 'loading': return 'Loading your Google Calendar…';
-    case 'off': return 'Google Calendar shows up here when you open Command from claude.ai.';
-    default: return esc(S.cal.msg || 'Google Calendar is not available right now.');
+    case 'loading': return 'Loading calendar…';
+    case 'off': return '';
+    default: return esc(S.cal.msg || '');
   }
 }

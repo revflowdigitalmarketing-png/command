@@ -17,7 +17,7 @@ button{cursor:pointer;border:0;background:none;padding:0;text-align:inherit}
 a{color:var(--ink)}
 :focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:4px}
 .mono{font-variant-numeric:tabular-nums}
-h1,h2,h3,h4{margin:0;text-wrap:balance;font-weight:600}
+h1,h2,h3,h4{margin:0;text-wrap:balance;font-weight:600;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 p{margin:0}
 
 /* shell */
@@ -46,7 +46,10 @@ body.menu-open .side-scrim{opacity:1;pointer-events:auto}
 .profile .pn{display:flex;flex-direction:column;min-width:0}
 .profile b{font-size:13.5px;font-weight:500}
 .profile small{font-size:11.5px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pfp{width:32px;height:32px;border-radius:50%;flex:none;background-color:var(--surface-3);background-position:center 58%}
+.pfp{width:32px;height:32px;border-radius:50%;flex:none;background:var(--surface-3);display:grid;place-items:center;font-weight:700;font-size:13.5px;color:var(--ink)}
+.prof-card{transition:transform .18s var(--ease),border-color .2s ease,background .2s ease,box-shadow .2s ease;position:relative;overflow:hidden}
+.prof-card:hover{background:var(--surface-2)!important;transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.25)}
+.prof-card:active{transform:scale(0.98)}
 .brand{display:flex;align-items:center;gap:10px;margin-bottom:28px}
 .logo{width:32px;height:32px;border-radius:var(--r);display:grid;place-items:center;background:var(--ink);color:var(--bg);font-weight:700;font-size:15px}
 .brand b{font-size:14px;font-weight:600}
@@ -273,9 +276,10 @@ body.menu-open .side-scrim{opacity:1;pointer-events:auto}
 
 /* prompt box (home notes + ask) */
 .hero{display:flex;flex-direction:column;align-items:center;gap:20px;padding-block:0 4px}
-.hero-q{font-size:26px;font-weight:500;letter-spacing:-.02em;line-height:1.25;text-align:center;max-width:22ch;color:var(--ink)}
-.hero-q span{color:var(--muted)}
-@media (min-width:760px){.hero-q{font-size:30px}}
+.hero-q{font-size:24px;font-weight:500;letter-spacing:-.02em;line-height:1.28;text-align:center;max-width:min(100%,720px);color:var(--ink);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-wrap:balance}
+.hero-q span{display:block;color:var(--muted);font-size:0.9em;margin-top:2px}
+@media (min-width:760px){.hero-q{font-size:28px}}
+@media (max-width:599px){.hero-q{font-size:20px;line-height:1.24}}
 .prompt{width:100%;max-width:760px;background:var(--surface-2);border-radius:14px;padding:16px 16px 12px;display:flex;flex-direction:column;gap:10px}
 .prompt textarea{width:100%;min-height:72px;max-height:320px;resize:none;background:none;border:0;outline:none;font-size:14.5px;line-height:1.55;padding:2px 2px}
 .prompt textarea::placeholder{color:var(--faint)}
@@ -290,6 +294,7 @@ body.menu-open .side-scrim{opacity:1;pointer-events:auto}
 .pills button{height:32px;padding:0 14px;border-radius:99px;background:var(--surface);font-size:12.5px;color:var(--muted)}
 .review{width:100%;max-width:760px;margin-top:0}
 .status-line{justify-content:center}
+.status-line:empty{display:none!important}
 #v-ask.chatting .hero-q,#v-ask.chatting .pills{display:none}
 #v-ask.chatting #ask-form{order:10;position:sticky;bottom:calc(84px + env(safe-area-inset-bottom,0px));max-width:none}
 @media (min-width:600px){#v-ask.chatting #ask-form{bottom:20px}}
@@ -342,7 +347,7 @@ body.menu-open .side-scrim{opacity:1;pointer-events:auto}
 /* banner */
 .banner{width:100%;max-width:760px;aspect-ratio:16/6;border-radius:12px;background-color:var(--surface);
   background-position:center 58%}
-.banner,.pfp{background-image:url(assets/banner.jpg);background-size:cover}
+.banner{background-image:url(assets/banner.jpg);background-size:cover}
 @media (max-width:599px){.banner{aspect-ratio:16/8;border-radius:10px}}
 #v-ask.chatting .banner{display:none}
 
@@ -495,3 +500,159 @@ body.menu-open .side-scrim{opacity:1;pointer-events:auto}
 
 .toast{position:fixed;left:50%;bottom:calc(88px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:100;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:var(--r);font-size:13.5px;font-weight:500;max-width:calc(100vw - 32px);text-align:center}
 @media (min-width:600px){.toast{bottom:28px}}
+
+/* ================= World Entering Portal Animation ================= */
+.world-entering {
+  animation: worldExpand 720ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  transform-origin: var(--world-x, 50vw) var(--world-y, 50vh);
+  will-change: transform, opacity, filter;
+  pointer-events: none;
+}
+
+@keyframes worldExpand {
+  0% {
+    opacity: 0.18;
+    transform: scale(0.85);
+    filter: blur(16px) brightness(1.25);
+  }
+  45% {
+    opacity: 0.88;
+    filter: blur(3px) brightness(1.08);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0px) brightness(1);
+  }
+}
+
+.world-portal {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.portal-curtain {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at var(--world-x, 50vw) var(--world-y, 50vh), var(--portal-tint, rgba(255,255,255,0.2)) 0%, rgba(17,17,18,0.75) 45%, rgba(17,17,18,0.96) 100%);
+  clip-path: circle(0px at var(--world-x, 50vw) var(--world-y, 50vh));
+  animation: curtainSweep 700ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes curtainSweep {
+  0% {
+    clip-path: circle(0px at var(--world-x, 50vw) var(--world-y, 50vh));
+    opacity: 0.95;
+  }
+  60% {
+    clip-path: circle(140vmax at var(--world-x, 50vw) var(--world-y, 50vh));
+    opacity: 0.6;
+  }
+  100% {
+    clip-path: circle(180vmax at var(--world-x, 50vw) var(--world-y, 50vh));
+    opacity: 0;
+  }
+}
+
+.portal-ripple {
+  position: fixed;
+  left: var(--world-x, 50vw);
+  top: var(--world-y, 50vh);
+  width: 16px;
+  height: 16px;
+  margin-left: -8px;
+  margin-top: -8px;
+  border-radius: 50%;
+  pointer-events: none;
+  border: 2px solid var(--portal-border, rgba(255, 255, 255, 0.85));
+  box-shadow: 0 0 50px var(--portal-glow, rgba(255, 255, 255, 0.65)), inset 0 0 25px var(--portal-glow, rgba(255, 255, 255, 0.35));
+  animation: rippleOut 720ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.portal-ripple.ring-2 {
+  border-width: 1px;
+  animation-duration: 780ms;
+  animation-delay: 60ms;
+  opacity: 0.7;
+}
+
+@keyframes rippleOut {
+  0% {
+    transform: scale(0.1);
+    opacity: 1;
+  }
+  70% {
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(180);
+    opacity: 0;
+  }
+}
+
+.portal-pill {
+  position: fixed;
+  top: 28px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-20px) scale(0.92);
+  z-index: 10001;
+  pointer-events: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 18px 8px 12px;
+  border-radius: 99px;
+  background: rgba(25, 25, 26, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--portal-border, rgba(255,255,255,0.2));
+  box-shadow: 0 12px 36px rgba(0,0,0,0.45), 0 0 24px var(--portal-glow, rgba(255,255,255,0.2));
+  color: var(--ink);
+  font-size: 13.5px;
+  font-weight: 500;
+  opacity: 0;
+  animation: portalPillPop 1.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.portal-pill .p-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--portal-accent, #fff);
+  color: #111;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+@keyframes portalPillPop {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-24px) scale(0.9);
+  }
+  15% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+  80% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-12px) scale(0.96);
+  }
+}
+
+/* Profile specific banner and aesthetics */
+body[data-profile="sri-chandana"] .banner {
+  background-image: url('assets/kung-fu-panda.jpg'), url('kung fu panda.jpg') !important;
+  background-position: center 42% !important;
+  border: 1px solid rgba(255, 182, 193, 0.2);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+

@@ -13,7 +13,7 @@ function renderClients() {
   $('#client-detail').hidden = !c;
   if (!b) {
     S.client = null;
-    $('#clients-crumb').innerHTML = 'Rahul / <b>Businesses</b>';
+    $('#clients-crumb').innerHTML = `${esc(S.settings.name || 'Rahul')} / <b>Businesses</b>`;
     $('#clients-title').textContent = 'Businesses';
     setTopBtn('New business', 'new-business');
     $('#biz-list').innerHTML = businesses().length ? businesses().map(mainFolder).join('') : `<div class="empty">No businesses yet. Tap "New business".</div>`;
@@ -21,20 +21,20 @@ function renderClients() {
   }
   if (b.kind === 'product') { renderLarp(b); return; }
   if (!c) {
-    $('#clients-crumb').innerHTML = `<button class="link" data-back="all">Businesses</button> / <b>${esc(b.name)}</b>`;
+    $('#clients-crumb').innerHTML = `<button class="link" data-back="all">${esc(S.settings.name || 'Rahul')}</button> / <b>${esc(b.name)}</b>`;
     $('#clients-title').textContent = b.name;
     setTopBtn('New client', 'new-client');
     const cl = bizClients(b.id);
     const open = openItems().filter(i => cl.some(x => x.id === i.client) && i.kind !== 'note');
     const monthly = cl.reduce((x, k) => x + (Number(k.retainer) || 0), 0);
     $('#biz-head').innerHTML = `<button class="back-btn" type="button" data-back="all"><svg><use href="#i-back"/></svg>All businesses</button>
-      <div class="glass detail-head"><div class="rev"><small>Revenue from ${esc(b.name)} clients</small><b>${inr(bizRevenue(b.id))}</b><span>${esc(b.tagline || '')}</span></div>
+      <div class="glass detail-head"><div class="rev"><small>Revenue from ${esc(b.name)} clients</small><b>${inr(bizRevenue(b.id))}</b>${b.tagline ? `<span>${esc(b.tagline)}</span>` : ''}</div>
       <div class="kv"><div><small>Clients</small><b>${cl.length}</b></div><div><small>Open work</small><b>${open.length}</b></div><div><small>Late</small><b>${open.filter(isLate).length}</b></div><div><small>Retainers / month</small><b class="mono">${monthly ? inr(monthly) : '—'}</b></div></div></div>`;
     $('#clients-list').innerHTML = cl.length ? cl.map(clientCard).join('') : `<div class="empty">No clients in ${esc(b.name)} yet. Tap "New client" to add one.</div>`;
     return;
   }
   setTopBtn('New client', 'new-client');
-  $('#clients-crumb').innerHTML = `<button class="link" data-back="all">Businesses</button> / <button class="link" data-back="biz">${esc(b.name)}</button> / <b>${esc(c.short || c.name)}</b>`;
+  $('#clients-crumb').innerHTML = `<button class="link" data-back="all">${esc(S.settings.name || 'Rahul')}</button> / <button class="link" data-back="biz">${esc(b.name)}</button> / <b>${esc(c.short || c.name)}</b>`;
   $('#clients-title').textContent = c.name;
   const mine = S.items.filter(i => i.client === c.id);
   const open = mine.filter(i => i.status !== 'done' && i.kind !== 'note');
