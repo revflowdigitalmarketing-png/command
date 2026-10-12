@@ -14,6 +14,7 @@ function renderNow() {
   if (S.view === 'clients') renderClients();
   if (S.view === 'word') renderWord();
   if (S.view === 'money') renderMoney();
+  updateInboxPip();
 }
 function placeNavInd() {
   const ind = $('#nav-ind'); if (!ind) return;
@@ -32,7 +33,15 @@ function taskRow(it, opts = {}) {
   if (it.kind !== 'task') bits.push(`<span>${KIND_LABEL[it.kind] || ''}${it.person ? ' · ' + esc(it.person) : ''}</span>`);
   if (it.kind === 'payment' && it.status === 'done' && it.doneAt) bits.push(`<span>Received ${new Date(it.doneAt).toLocaleDateString('en-IN',{day:'numeric', month:'short', year:'numeric'})}</span>`);
   else if (d.text) bits.push(`<span class="${d.cls}"><svg><use href="#i-clock"/></svg> ${d.text}${it.time ? ', ' + fmtTime(it.time) : ''}</span>`);
-  if (it.kind === 'payment' && it.amount) bits.push(`<span class="mono">${inr(it.amount)}</span>`);
+  if (it.kind === 'payment') {
+    if (it.totalRetainer || it.yourShare) {
+      const pInfo = [];
+      if (it.totalRetainer) pInfo.push(`Total: ${inr(it.totalRetainer)}`);
+      if (it.yourShare) pInfo.push(`Share: ${inr(it.yourShare)}`);
+      bits.push(`<span class="mono faint" style="font-size:12px">${pInfo.join(' · ')}</span>`);
+    }
+    if (it.amount) bits.push(`<span class="mono" style="font-weight:600">${inr(it.amount)}</span>`);
+  }
   if (it.cal) bits.push(`<span title="On Google Calendar"><svg><use href="#i-cal"/></svg></span>`);
   return `<div class="task ${it.status === 'done' ? 'done' : ''}" data-id="${it.id}">
     <button class="check" data-toggle="${it.id}" aria-label="${it.status === 'done' ? 'Mark not done' : 'Mark done'}"><svg><use href="#i-check"/></svg></button>
@@ -156,7 +165,7 @@ function renderHome() {
   // clients rail
   const cl = clients();
   $('#client-rail').innerHTML = businesses().length ? businesses().map(mainFolder).join('') :
-    `<div class="empty">No clients yet. <button class="link" data-action="new-client" style="color:var(--ink)">Add your first client</button></div>`;
+    `<div class="empty">No businesses yet. <button class="link" data-action="manage-businesses" style="color:var(--ink)">Manage businesses</button></div>`;
 
   // focus: overdue + today + high priority soon
   const focus = sortItems(open.filter(i => i.kind !== 'note' && i.kind !== 'glitch' && (isLate(i) || i.due === t || (i.priority === 'high' && (!i.due || dayDiff(i.due) <= 2)))));
@@ -190,9 +199,11 @@ function renderHome() {
   renderDay();
 }
 function mainFolder(b) {
+  const frontStyle = b.cover ? `background:linear-gradient(rgba(0,0,0,0.35),rgba(0,0,0,0.72)),url('${esc(b.cover)}') center/cover;color:#fff;` : '';
+  const tagStyle = b.cover ? 'color:rgba(255,255,255,0.85);' : '';
   return `<button class="mcard" data-biz="${b.id}">
     <span class="mfold" aria-hidden="true"><span class="m-l3"></span><span class="m-l2"></span>
-      <span class="m-front"><span class="m-tag">${b.kind === 'product' ? 'APP IDEA' : 'AGENCY'}</span><span class="m-name">${esc(b.name)}</span></span></span>
+      <span class="m-front" style="${frontStyle}"><span class="m-tag" style="${tagStyle}">${b.kind === 'product' ? 'APP IDEA' : 'AGENCY'}</span><span class="m-name">${esc(b.name)}</span></span></span>
   </button>`;
 }
 function weekDays(offset) {
@@ -205,9 +216,10 @@ function clientCard(c) {
   const late = open.filter(isLate).length;
   const next = sortItems(open.filter(i => validDate(i.due)))[0];
   const papers = open.length ? `<span class="f-paper p1"></span>${open.length > 1 ? '<span class="f-paper p2"></span>' : ''}` : '';
-  const sub = `${open.length} open${late ? ` · ${late} late` : next ? ' · ' + dueLabel(next.due).text : ''}`;
+  const sub = `${open.length} open${late ? ` · ${late} late` : next ? ' · ' + dueLabel(next.due).text : ''}${c.retainer ? ` · ${inr(c.retainer)}` : ''}`;
+  const frontStyle = c.cover ? `background:linear-gradient(rgba(0,0,0,0.3),rgba(0,0,0,0.7)),url('${esc(c.cover)}') center/cover;color:#fff;` : '';
   return `<button class="folder-card" data-client="${c.id}">
-    <span class="folder" aria-hidden="true"><span class="f-back"></span>${papers}<span class="f-front"><span class="f-badges"><span class="f-chip">★ ${starsOf(c).toFixed(1)}</span>${late ? `<span class="f-chip late">${late} late</span>` : ''}</span></span></span>
+    <span class="folder" aria-hidden="true"><span class="f-back"></span>${papers}<span class="f-front" style="${frontStyle}"><span class="f-badges"><span class="f-chip">★ ${starsOf(c).toFixed(1)}</span>${late ? `<span class="f-chip late">${late} late</span>` : ''}</span></span></span>
     <span class="f-name">${esc(c.short || c.name)}</span>
     <span class="f-sub">${esc(sub)}</span>
   </button>`;
@@ -276,23 +288,25 @@ function ringSvg(frac) {
 }
 function renderStreak() {
   const t = today();
-  // streak: consecutive ok days ending today (if ok) or yesterday; inactive days with nothing overdue don't break it
+  const started = !!S.settings.streakStarted;
   let streak = 0;
-  const todaySt = dayStatus(t);
-  let d = todaySt.ok ? t : addDays(t, -1);
-  for (let k = 0; k < 400; k++) {
-    const st = dayStatus(d);
-    if (st.ok) streak++;
-    else if (st.active || st.leftOpen) break;
-    const first = S.items.reduce((m, i) => Math.min(m, i.created || Infinity), Infinity);
-    if (!isFinite(first) || parseYmd(d).getTime() < first) break;
-    d = addDays(d, -1);
+  if (started) {
+    const todaySt = dayStatus(t);
+    let d = todaySt.ok ? t : addDays(t, -1);
+    for (let k = 0; k < 400; k++) {
+      const st = dayStatus(d);
+      if (st.ok) streak++;
+      else if (st.active || st.leftOpen) break;
+      const first = S.items.reduce((m, i) => Math.min(m, i.created || Infinity), Infinity);
+      if (!isFinite(first) || parseYmd(d).getTime() < first) break;
+      d = addDays(d, -1);
+    }
   }
   const now = parseYmd(t); const dow = (now.getDay() + 6) % 7; // Monday = 0
   const monday = addDays(t, -dow);
   const week = Array.from({ length: 7 }, (_, i) => addDays(monday, i)).map(day => {
     const lbl = parseYmd(day).toLocaleDateString('en-IN', { weekday:'short' });
-    if (day > t) return `<div class="wd"><i></i>${lbl}</div>`;
+    if (!started || day > t) return `<div class="wd"><i></i>${lbl}</div>`;
     const st = dayStatus(day);
     if (day === t && !st.ok) {
       const frac = st.dueTotal ? st.dueDone / st.dueTotal : 0;
@@ -305,7 +319,11 @@ function renderStreak() {
   const pct = dueToday.length ? Math.round(doneN / dueToday.length * 100) : 0;
   $('#streak').innerHTML = `
     <div class="streak-top"><div><small>STREAK</small><b>${streak}<span>${streak === 1 ? 'DAY' : 'DAYS'}</span></b></div>
-      <div class="faint" style="font-size:12px;text-align:right;max-width:18ch">A tick means nothing was left overdue that day</div></div>
+      <div style="display:flex;align-items:center;gap:10px">
+        ${!started ? `<button type="button" class="btn small primary" data-action="start-streak" style="padding:4px 12px;font-size:12px;height:28px">Start</button>` : ''}
+        <div class="faint" style="font-size:12px;text-align:right;max-width:18ch">A tick means nothing was left overdue that day</div>
+      </div>
+    </div>
     <div class="week">${week}</div>
     <div class="streak-bar"><small>TODAY</small>
       <div class="row"><b>${doneN}<span> / ${dueToday.length} done</span></b><span class="faint" style="font-size:12.5px">${dueToday.length ? pct + '%' : 'Nothing due'}</span></div>

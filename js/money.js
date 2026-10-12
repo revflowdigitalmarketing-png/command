@@ -3,6 +3,7 @@
 function renderMoney() {
   const cl = clients();
   const monthly = cl.reduce((s, c) => s + (Number(c.retainer) || 0), 0);
+  const myShareMonthly = cl.reduce((s, c) => s + (Number(c.yourShare !== undefined ? c.yourShare : c.retainer) || 0), 0);
   const pays = S.items.filter(i => i.kind === 'payment');
   const pending = pays.filter(i => i.status !== 'done');
   const pendingSum = pending.reduce((s, i) => s + (i.amount || 0), 0);
@@ -15,9 +16,9 @@ function renderMoney() {
   const nextPay = sortItems([...pending])[0];
   const retSet = cl.filter(c => c.retainer).length;
   $('#money-stats').innerHTML = [
-    ['Received this month', inr(recvMonth), monthly ? `of ${inr(monthly)} expected from retainers` : `${now.toLocaleDateString('en-IN',{month:'long'})} so far`],
+    ['Received this month', inr(recvMonth), monthly ? `of ${inr(myShareMonthly)} your share` : `${now.toLocaleDateString('en-IN',{month:'long'})} so far`],
     ['Waiting to be paid', inr(pendingSum), pending.length ? `${pending.length} payment${pending.length === 1 ? '' : 's'}${nextPay && nextPay.due ? ' · next ' + dueLabel(nextPay.due).text.toLowerCase() : ''}` : 'Nobody owes you right now'],
-    ['Monthly retainers', inr(monthly), `${retSet} of ${cl.length} clients have a retainer set`],
+    ['Monthly retainers', inr(monthly), myShareMonthly ? `Your share: ${inr(myShareMonthly)} / mo` : `${retSet} of ${cl.length} clients set`],
     ['Saved for trips', inr(saved), targets ? `of ${inr(targets)} across ${goals.length} trip${goals.length === 1 ? '' : 's'}` : 'Set trip budgets below']
   ].map(([k, v, p]) => `<div class="stat"><small>${k}</small><b class="mono">${v}</b><p>${p}</p></div>`).join('');
 
@@ -40,8 +41,8 @@ function renderMoney() {
   $('#pending').innerHTML = pending.length ? sortItems(pending).map(i => taskRow(i)).join('') : `<div class="empty">Nobody owes you anything right now.</div>`;
   $('#retainers').innerHTML = cl.length ? cl.map(c => `<button class="task" data-editclient="${c.id}" style="grid-template-columns:minmax(0,1fr) auto;text-align:left">
       <span class="stripe" style="background:${clientColor(c)}"></span>
-      <span class="body"><span class="ttl">${esc(c.name)}</span><span class="sub">${c.retainer ? 'per month' : 'Tap to set the retainer'}</span></span>
-      <span class="mono" style="font-weight:600">${c.retainer ? inr(c.retainer) : '—'}</span></button>`).join('') : `<div class="empty">Add clients to set retainers.</div>`;
+      <span class="body"><span class="ttl">${esc(c.name)}</span><span class="sub">${c.retainer ? `Total: ${inr(c.retainer)}${c.yourShare ? ` · Your share: ${inr(c.yourShare)}` : ''}` : 'Tap to set retainer'}</span></span>
+      <span class="mono" style="font-weight:600">${c.yourShare ? inr(c.yourShare) : (c.retainer ? inr(c.retainer) : '—')}</span></button>`).join('') : `<div class="empty">Add clients to set retainers.</div>`;
   const rl = recv.sort((a,b) => (b.doneAt||0) - (a.doneAt||0)).slice(0, 10);
   $('#received').innerHTML = rl.length ? rl.map(i => taskRow(i)).join('') : `<div class="empty">When a payment comes in, tick it and it moves here.</div>`;
 }

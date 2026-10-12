@@ -28,9 +28,12 @@ document.addEventListener('click', e => {
   if (d.reel) { editReel(d.reel); return; }
   if (d.newreel) { editReel(null, d.newreel); return; }
   if (d.rweek) { S.rweek = (S.rweek || 0) + Number(d.rweek); renderNow(); return; }
-  if (d.action === 'new-business') { editBusiness(); return; }
+  if (d.action === 'manage-businesses') { openManageBusinesses(); return; }
+  if (d.action === 'manage-clients') { openManageClients(S.biz); return; }
+  if (d.action === 'new-business') { openManageBusinesses(); return; }
   if (d.action === 'new-reel') { editReel(null, today()); return; }
   if (d.ctab) { S.ctab = d.ctab; renderNow(); return; }
+  if (d.editbiz) { editBusiness(d.editbiz); return; }
   if (d.editclient) { editClient(d.editclient); return; }
   if (d.logpay !== undefined) { logPayment(d.logpay); return; }
   if (d.goal) { editGoal(d.goal); return; }
@@ -43,6 +46,11 @@ document.addEventListener('click', e => {
   if (d.h24 !== undefined) { PC.h24 = d.h24 === '1'; renderComposer(); return; }
   if (d.action === 'profiles') { document.body.classList.remove('menu-open'); openProfileSheet(); return; }
   if (d.action === 'settings') { document.body.classList.remove('menu-open'); editSettings(); return; }
+  if (d.action === 'open-inbox') { openInboxSheet(); return; }
+  if (d.action === 'start-streak') { S.settings.streakStarted = true; S.settings.streakStartDate = today(); saveSettings(); toast('Streak started! Keep momentum going.'); return; }
+  if (d.action === 'new-focus-task') { editFocusTask(null); return; }
+  if (d.editfocustask) { editFocusTask(d.editfocustask); return; }
+  if (d.inboxtoggle) { toggleInboxItem(d.inboxtoggle); if ($('#inbox-list')) openInboxSheet(); return; }
   if (d.switchprofile) {
     const rect = t.getBoundingClientRect();
     const originX = (e.clientX && e.clientX > 0) ? e.clientX : (rect.left + rect.width / 2);
@@ -51,7 +59,7 @@ document.addEventListener('click', e => {
     switchProfile(d.switchprofile, { x: originX, y: originY });
     return;
   }
-  if (d.action === 'new-client') { editClient(null); return; }
+  if (d.action === 'new-client') { openManageClients(S.biz); return; }
   if (d.action === 'new-item') { editItem(null, { kind:'task', due: today() }); return; }
   if (d.action === 'new-promise') { editItem(null, { kind:'promise', priority:'high' }); return; }
   if (d.action === 'new-payment') { logPayment(''); return; }
@@ -79,7 +87,7 @@ $('#ask-form').addEventListener('submit', e => { e.preventDefault(); const q = $
 $('#dump-card').addEventListener('submit', e => { e.preventDefault(); organise(); });
 $('#pc-form').addEventListener('submit', e => { e.preventDefault(); savePromise(); });
 $('#glitch-form').addEventListener('submit', e => { e.preventDefault(); const v = $('#glitch-in').value.trim(); if (!v) return; saveItem(makeItem({ kind:'glitch', title: v, biz: S.biz || productBiz(), priority:'med' })); $('#glitch-in').value = ''; toast('Glitch logged.'); });
-['#pc-what','#pc-who'].forEach(sel => $(sel).addEventListener('input', renderComposerInfo));
+['#pc-what','#pc-who'].forEach(sel => { const el = $(sel); if (el) { el.addEventListener('input', renderComposerInfo); el.addEventListener('change', renderComposerInfo); } });
 $('#pc-client').addEventListener('change', renderComposerInfo);
 $('#pc-what').addEventListener('input', e => autoGrow(e.target));
 $('#ask-in').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); $('#ask-form').requestSubmit(); } });

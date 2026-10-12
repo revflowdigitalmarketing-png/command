@@ -75,20 +75,7 @@ function editReel(id, date) {
     if (del) del.onclick = () => { if (del.dataset.sure) { closeSheet(); removeItem(r.id); } else { del.dataset.sure = '1'; del.textContent = 'Tap again to delete'; } };
   });
 }
-function editBusiness() {
-  openSheet(`<h2>New business</h2>
-    <div class="field"><label for="b-name">Name</label><input class="in" id="b-name" placeholder="Business name"></div>
-    <div class="field"><label for="b-kind">Type</label><select class="in" id="b-kind"><option value="agency">Business with clients</option><option value="product">App or idea (glitches + reels)</option></select></div>
-    <div class="field"><label for="b-tag">One line about it</label><input class="in" id="b-tag" placeholder="What it does"></div>
-    <div class="sheet-actions"><button class="btn" id="b-cancel">Cancel</button><button class="btn primary" id="b-save">Save</button></div>`, sh => {
-    sh.querySelector('#b-cancel').onclick = closeSheet;
-    sh.querySelector('#b-save').onclick = () => {
-      const name = $('#b-name').value.trim(); if (!name) { toast('Name the business.'); return; }
-      S.settings.businesses = [...businesses(), { id: newId(), name, kind: $('#b-kind').value, tagline: $('#b-tag').value.trim() }];
-      closeSheet(); saveSettings(); toast('Business added.');
-    };
-  });
-}
+
 function promiseRow(it) {
   const c = clientById(it.client);
   const d = dueLabel(it.due);
@@ -147,20 +134,69 @@ function renderComposerInfo() {
 async function savePromise() {
   const title = $('#pc-what').value.trim();
   if (!title) { toast('Write what you promised first.'); $('#pc-what').focus(); return; }
-  const it = makeItem({ kind:'promise', title, person: $('#pc-who').value.trim(), client: $('#pc-client').value, due: PC.date, time: PC.time, priority:'high' });
+  const who = $('#pc-who').value.trim();
+  const it = makeItem({
+    kind: 'promise',
+    title,
+    person: who,
+    client: $('#pc-client').value,
+    due: PC.date,
+    time: PC.time,
+    priority: 'high',
+    fromProfileId: S.profileId || 'rahul'
+  });
   $('#pc-state').textContent = 'Saving…';
   await saveItem(it);
+  const targetPid = profileIdForPerson(who);
+  if (targetPid && targetPid !== S.profileId) {
+    const targetItems = lsGet(`cmd.items_${targetPid}`, null) || defaultItemsFor(targetPid) || [];
+    if (!targetItems.some(x => x.id === it.id)) {
+      targetItems.push({ ...it });
+      lsSet(`cmd.items_${targetPid}`, targetItems);
+    }
+  }
   let cal = false;
   if ($('#pc-cal').checked && it.due) cal = await pushToCalendar(it, true);
   $('#pc-what').value = ''; $('#pc-who').value = ''; PC.date = ''; PC.time = ''; $('#pc-state').textContent = '';
   renderComposer();
+  updateInboxPip();
   toast(`Promise saved${cal ? ' and added to Google Calendar' : it.due ? '' : '. Add a date so it can remind you'}.`);
 }
+
+function focusTaskRow(it) {
+  const c = clientById(it.client);
+  const d = dueLabel(it.due);
+  const cat = it.category || 'Other';
+  return `<div class="task ${it.status === 'done' ? 'done' : ''}" data-id="${it.id}">
+    <button class="check" data-toggle="${it.id}" aria-label="${it.status === 'done' ? 'Mark not done' : 'Mark done'}"><svg><use href="#i-check"/></svg></button>
+    <button class="body" data-editfocustask="${it.id}">
+      <span class="ttl">${esc(it.title)}</span>
+      <span class="when">
+        <span class="chip" style="font-size:11px;padding:1px 7px;font-weight:600;background:var(--surface-3);color:var(--ink)">${esc(cat)}</span>
+        ${c ? `<span>${esc(c.short || c.name)}</span>` : ''}
+        ${d.text ? `<span class="${d.cls === 'od' ? '' : 'faint'}">${esc(d.text)}</span>` : ''}
+      </span>
+    </button>
+    <button class="more" data-editfocustask="${it.id}" aria-label="Edit"><svg><use href="#i-dots"/></svg></button>
+  </div>`;
+}
+
 function renderWord() {
   renderComposer();
+  const focusItems = S.items.filter(i => (i.isFocus || i.kind === 'task') && i.kind !== 'promise' && i.kind !== 'glitch' && i.kind !== 'reel' && i.kind !== 'payment' && i.kind !== 'note');
+  const openFocus = sortItems(focusItems.filter(i => i.status !== 'done'));
+  const doneFocus = focusItems.filter(i => i.status === 'done').sort((a,b) => (b.doneAt||0) - (a.doneAt||0)).slice(0, 10);
+  const allFocus = [...openFocus, ...doneFocus];
+  const focusList = $('#word-focus-list');
+  if (focusList) {
+    focusList.innerHTML = allFocus.length ? allFocus.map(focusTaskRow).join('') : `<div class="empty">No focus tasks yet. Tap "+ Add task" to prioritize what to work on today.</div>`;
+  }
+
   const ps = S.items.filter(i => i.kind === 'promise');
   const open = sortItems(ps.filter(i => i.status !== 'done'));
   $('#word-list').innerHTML = open.length ? open.map(promiseRow).join('') : `<div class="empty">No open promises. When you tell someone "I'll do it", add it here.</div>`;
   const done = ps.filter(i => i.status === 'done').sort((a,b) => (b.doneAt||0) - (a.doneAt||0)).slice(0, 20);
   $('#word-done').innerHTML = done.length ? done.map(promiseRow).join('') : `<div class="empty">Kept promises show up here.</div>`;
+  updateInboxPip();
 }
+

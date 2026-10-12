@@ -15,25 +15,30 @@ function renderClients() {
     S.client = null;
     $('#clients-crumb').innerHTML = `${esc(S.settings.name || 'Rahul')} / <b>Businesses</b>`;
     $('#clients-title').textContent = 'Businesses';
-    setTopBtn('New business', 'new-business');
-    $('#biz-list').innerHTML = businesses().length ? businesses().map(mainFolder).join('') : `<div class="empty">No businesses yet. Tap "New business".</div>`;
+    setTopBtn('Manage businesses', 'manage-businesses');
+    $('#biz-list').innerHTML = businesses().length ? businesses().map(mainFolder).join('') : `<div class="empty">No businesses yet. Tap "Manage businesses".</div>`;
     return;
   }
   if (b.kind === 'product') { renderLarp(b); return; }
   if (!c) {
     $('#clients-crumb').innerHTML = `<button class="link" data-back="all">${esc(S.settings.name || 'Rahul')}</button> / <b>${esc(b.name)}</b>`;
     $('#clients-title').textContent = b.name;
-    setTopBtn('New client', 'new-client');
+    setTopBtn('Manage clients', 'manage-clients');
     const cl = bizClients(b.id);
     const open = openItems().filter(i => cl.some(x => x.id === i.client) && i.kind !== 'note');
     const monthly = cl.reduce((x, k) => x + (Number(k.retainer) || 0), 0);
-    $('#biz-head').innerHTML = `<button class="back-btn" type="button" data-back="all"><svg><use href="#i-back"/></svg>All businesses</button>
+    const myShareTotal = cl.reduce((x, k) => x + (Number(k.yourShare !== undefined ? k.yourShare : k.retainer) || 0), 0);
+    $('#biz-head').innerHTML = `${b.cover ? `<div class="biz-banner" style="background-image:url('${esc(b.cover)}')"></div>` : ''}
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <button class="back-btn" type="button" data-back="all" style="margin-bottom:0"><svg><use href="#i-back"/></svg>All businesses</button>
+        <button class="btn small" data-editbiz="${b.id}"><svg><use href="#i-pen"/></svg>Edit business</button>
+      </div>
       <div class="glass detail-head"><div class="rev"><small>Revenue from ${esc(b.name)} clients</small><b>${inr(bizRevenue(b.id))}</b>${b.tagline ? `<span>${esc(b.tagline)}</span>` : ''}</div>
-      <div class="kv"><div><small>Clients</small><b>${cl.length}</b></div><div><small>Open work</small><b>${open.length}</b></div><div><small>Late</small><b>${open.filter(isLate).length}</b></div><div><small>Retainers / month</small><b class="mono">${monthly ? inr(monthly) : '—'}</b></div></div></div>`;
-    $('#clients-list').innerHTML = cl.length ? cl.map(clientCard).join('') : `<div class="empty">No clients in ${esc(b.name)} yet. Tap "New client" to add one.</div>`;
+      <div class="kv"><div><small>Clients</small><b>${cl.length}</b></div><div><small>Open work</small><b>${open.length}</b></div><div><small>Total retainers / mo</small><b class="mono">${monthly ? inr(monthly) : '—'}</b></div><div><small>Your share / mo</small><b class="mono">${myShareTotal ? inr(myShareTotal) : '—'}</b></div></div></div>`;
+    $('#clients-list').innerHTML = cl.length ? cl.map(clientCard).join('') : `<div class="empty">No clients in ${esc(b.name)} yet. Tap "Manage clients" to add or organize.</div>`;
     return;
   }
-  setTopBtn('New client', 'new-client');
+  setTopBtn('Manage clients', 'manage-clients');
   $('#clients-crumb').innerHTML = `<button class="link" data-back="all">${esc(S.settings.name || 'Rahul')}</button> / <button class="link" data-back="biz">${esc(b.name)}</button> / <b>${esc(c.short || c.name)}</b>`;
   $('#clients-title').textContent = c.name;
   const mine = S.items.filter(i => i.client === c.id);
@@ -44,19 +49,20 @@ function renderClients() {
   const revMonth = mine.filter(i => i.kind === 'payment' && i.status === 'done' && i.doneAt && ymd(new Date(i.doneAt)).startsWith(mk)).reduce((x, i) => x + (i.amount || 0), 0);
   const signed = c.signed || c.since || '';
   $('#client-head').innerHTML = `
+    ${c.cover ? `<div class="client-banner" style="background-image:url('${esc(c.cover)}')"></div>` : ''}
     <button class="back-btn" type="button" data-back="biz"><svg><use href="#i-back"/></svg>Back to ${esc((bizById(clientBiz(c)) || {}).name || "clients")}</button>
     <div class="glass detail-head">
     <div class="dh-top">
       <div style="min-width:0">${starRow(starsOf(c))}<span class="dh-rate">${starsOf(c).toFixed(1)} / 5</span>
         <div class="muted" style="font-size:13px;margin-top:4px">${esc(c.note || 'Client')}</div></div>
-      <div class="dh-actions"><button class="btn small" data-editclient="${c.id}">Edit client</button><button class="btn small primary" data-logpay="${c.id}">Log payment</button></div>
+      <div class="dh-actions"><button class="btn small" data-editclient="${c.id}"><svg><use href="#i-pen"/></svg>Edit client</button><button class="btn small primary" data-logpay="${c.id}">Log payment</button></div>
     </div>
     <div class="rev"><small>Revenue from ${esc(c.short || c.name)}</small><b>${inr(rev)}</b><span>${revMonth ? inr(revMonth) + ' this month' : 'Nothing received this month yet'}${pending ? ' · ' + inr(pending) + ' pending' : ''}</span></div>
     <div class="kv">
       <div><small>Contract signed</small><b>${signed ? esc(parseYmd(signed).toLocaleDateString('en-IN',{day:'numeric', month:'short', year:'numeric'})) : '—'}</b></div>
-      <div><small>Monthly retainer</small><b class="mono">${c.retainer ? inr(c.retainer) : '—'}</b></div>
-      <div><small>Open</small><b>${open.length}</b></div>
-      <div><small>Late</small><b>${open.filter(isLate).length}</b></div>
+      <div><small>Total Retainer</small><b class="mono">${c.retainer ? inr(c.retainer) : '—'}</b></div>
+      <div><small>Your Share</small><b class="mono">${c.yourShare ? inr(c.yourShare) : (c.retainer ? inr(c.retainer) : '—')}</b></div>
+      <div><small>Open work</small><b>${open.length}</b></div>
     </div></div>`;
   $$('#client-tabs button').forEach(b => b.setAttribute('aria-pressed', b.dataset.ctab === S.ctab));
   let list;

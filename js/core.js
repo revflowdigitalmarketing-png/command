@@ -33,6 +33,7 @@ const KIND_LABEL = { task:'Task', meeting:'Meeting', promise:'Promise', payment:
 const GLITCH_STAGES = [['todo','To fix'],['fixing','Fixing'],['fixed','Fixed']];
 const REEL_STAGES = [['idea','Idea'],['shoot','Shoot'],['edit','Edit'],['posted','Posted']];
 const PRIO_COLOR = { high:'var(--ink)', med:'var(--muted)', low:'var(--faint)' };
+const FOCUS_CATEGORIES = ['Video Editing', 'Website', 'SEO', 'Automations', 'Other'];
 
 function toast(msg) {
   if (!msg) return;
@@ -78,8 +79,8 @@ function defaultSettingsFor(profileId) {
         { id: 'biz-content', name: 'Content Agency', kind: 'agency', tagline: '' }
       ],
       clients: [
-        { id: 'cl-1', name: 'Apex Media', short: 'Apex', stars: 5, retainer: 45000, note: 'Social media & performance marketing', color: 0, signed: '2026-08-01', biz: 'biz-revflow' },
-        { id: 'cl-2', name: 'Nova Studio', short: 'Nova', stars: 4, retainer: 35000, note: 'Content creation & video campaigns', color: 1, signed: '2026-09-15', biz: 'biz-content' }
+        { id: 'cl-1', name: 'Apex Media', short: 'Apex', stars: 5, retainer: 45000, yourShare: 32000, note: 'Social media & performance marketing', color: 0, signed: '2026-08-01', biz: 'biz-revflow' },
+        { id: 'cl-2', name: 'Nova Studio', short: 'Nova', stars: 4, retainer: 35000, yourShare: 25000, note: 'Content creation & video campaigns', color: 1, signed: '2026-09-15', biz: 'biz-content' }
       ],
       goals: [
         { id: 'goal-dubai', name: 'Dubai trip', target: 250000, saved: 175000, date: addDays(today(), 42), note: '1 week with the crew' },
@@ -102,8 +103,8 @@ function defaultSettingsFor(profileId) {
         { id: 'biz-larping', name: 'LARPING', kind: 'product', tagline: '' }
       ],
       clients: [
-        { id: 'cl-1', name: 'Apex Media', short: 'Apex', stars: 5, retainer: 45000, note: 'Social media & performance marketing', color: 0, signed: '2026-08-01', biz: 'biz-revflow' },
-        { id: 'cl-2', name: 'Nova Studio', short: 'Nova', stars: 4, retainer: 35000, note: 'Website maintenance & UI redesign', color: 1, signed: '2026-09-15', biz: 'biz-weblit' }
+        { id: 'cl-1', name: 'Apex Media', short: 'Apex', stars: 5, retainer: 45000, yourShare: 32000, note: 'Social media & performance marketing', color: 0, signed: '2026-08-01', biz: 'biz-revflow' },
+        { id: 'cl-2', name: 'Nova Studio', short: 'Nova', stars: 4, retainer: 35000, yourShare: 25000, note: 'Website maintenance & UI redesign', color: 1, signed: '2026-09-15', biz: 'biz-weblit' }
       ],
       goals: [
         { id: 'goal-dubai', name: 'Dubai trip', target: 250000, saved: 175000, date: addDays(today(), 42), note: '1 week with the crew' },
@@ -126,8 +127,8 @@ function defaultSettingsFor(profileId) {
       { id: 'biz-larping', name: 'LARPING', kind: 'product', tagline: '' }
     ],
     clients: [
-      { id: 'cl-1', name: 'Apex Media', short: 'Apex', stars: 5, retainer: 45000, note: 'Social media & performance marketing', color: 0, signed: '2026-08-01', biz: 'biz-revflow' },
-      { id: 'cl-2', name: 'Nova Studio', short: 'Nova', stars: 4, retainer: 35000, note: 'Website maintenance & UI redesign', color: 1, signed: '2026-09-15', biz: 'biz-weblit' }
+      { id: 'cl-1', name: 'Apex Media', short: 'Apex', stars: 5, retainer: 45000, yourShare: 32000, note: 'Social media & performance marketing', color: 0, signed: '2026-08-01', biz: 'biz-revflow' },
+      { id: 'cl-2', name: 'Nova Studio', short: 'Nova', stars: 4, retainer: 35000, yourShare: 25000, note: 'Website maintenance & UI redesign', color: 1, signed: '2026-09-15', biz: 'biz-weblit' }
     ],
     goals: [
       { id: 'goal-dubai', name: 'Dubai trip', target: 250000, saved: 175000, date: addDays(today(), 42), note: '1 week with the crew' },
@@ -184,30 +185,39 @@ lsSet(`cmd.items_${activeProfileId}`, finalItems);
 lsSet('cmd.settings', finalSettings);
 lsSet('cmd.items', finalItems);
 
+function readImageFile(file, maxWidth = 900, maxHeight = 600) {
+  return new Promise((resolve, reject) => {
+    if (!file || !file.type || !file.type.startsWith('image/')) return reject(new Error('Not an image file'));
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        if (w > maxWidth || h > maxHeight) {
+          const ratio = Math.min(maxWidth / w, maxHeight / h);
+          w = Math.round(w * ratio);
+          h = Math.round(h * ratio);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.82));
+      };
+      img.onerror = () => resolve(e.target.result);
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 function triggerWorldPortal(p, ox, oy) {
-  const root = document.documentElement;
   const cx = Math.round(ox || window.innerWidth / 2);
   const cy = Math.round(oy || window.innerHeight / 2);
-  root.style.setProperty('--world-x', `${cx}px`);
-  root.style.setProperty('--world-y', `${cy}px`);
-  
-  if (p.id === 'sri-chandana') {
-    root.style.setProperty('--portal-tint', 'rgba(255, 182, 193, 0.28)');
-    root.style.setProperty('--portal-border', 'rgba(255, 192, 203, 0.9)');
-    root.style.setProperty('--portal-glow', 'rgba(255, 182, 193, 0.65)');
-    root.style.setProperty('--portal-accent', '#fbcfe8');
-  } else if (p.id === 'adithya') {
-    root.style.setProperty('--portal-tint', 'rgba(168, 85, 247, 0.25)');
-    root.style.setProperty('--portal-border', 'rgba(192, 132, 252, 0.9)');
-    root.style.setProperty('--portal-glow', 'rgba(168, 85, 247, 0.65)');
-    root.style.setProperty('--portal-accent', '#ddd6fe');
-  } else {
-    root.style.setProperty('--portal-tint', 'rgba(255, 255, 255, 0.22)');
-    root.style.setProperty('--portal-border', 'rgba(255, 255, 255, 0.9)');
-    root.style.setProperty('--portal-glow', 'rgba(255, 255, 255, 0.6)');
-    root.style.setProperty('--portal-accent', '#ffffff');
-  }
-  
+  document.documentElement.style.setProperty('--world-x', `${cx}px`);
+  document.documentElement.style.setProperty('--world-y', `${cy}px`);
   document.body.dataset.profile = p.id;
   
   let portal = document.getElementById('world-portal');
@@ -219,29 +229,19 @@ function triggerWorldPortal(p, ox, oy) {
     document.body.appendChild(portal);
   }
   
+  const displayName = (S.settings && S.settings.name) ? S.settings.name : p.name;
   portal.hidden = false;
-  portal.innerHTML = `
-    <div class="portal-curtain"></div>
-    <div class="portal-ripple"></div>
-    <div class="portal-ripple ring-2"></div>
-    <div class="portal-pill">
-      <span class="p-dot">${p.avatarLetter}</span>
-      <span>Entering <b>${esc(p.name)}'s World</b></span>
-    </div>
-  `;
-  
-  const app = document.querySelector('.app');
-  if (app) {
-    app.classList.remove('world-entering');
-    void app.offsetWidth;
-    app.classList.add('world-entering');
-  }
+  portal.classList.remove('active');
+  void portal.offsetWidth;
+  portal.classList.add('active');
+  portal.innerHTML = `<div class="portal-text">Entering ${esc(displayName)}'s world..</div>`;
   
   clearTimeout(triggerWorldPortal._tid);
   triggerWorldPortal._tid = setTimeout(() => {
-    if (app) app.classList.remove('world-entering');
-    if (portal) portal.hidden = true;
-  }, 1900);
+    portal.classList.remove('active');
+    portal.hidden = true;
+    portal.innerHTML = '';
+  }, 3800);
 }
 
 function switchProfile(pid, origin = null) {
@@ -382,3 +382,59 @@ const clientById = id => (S.settings.clients || []).find(c => c.id === id);
 const clientColor = c => c ? CLIENT_COLORS[(c.color ?? 0) % CLIENT_COLORS.length] : 'var(--faint)';
 const openItems = () => S.items.filter(i => i.status !== 'done');
 const isLate = i => i.status !== 'done' && validDate(i.due) && dayDiff(i.due) < 0;
+
+function profileIdForPerson(person) {
+  if (!person) return null;
+  const p = String(person).toLowerCase().trim();
+  if (p.includes('adithya')) return 'adithya';
+  if (p.includes('rahul')) return 'rahul';
+  if (p.includes('chandana')) return 'sri-chandana';
+  return null;
+}
+
+function getInboxItemsForProfile(pid) {
+  const all = [];
+  const profs = ['rahul', 'sri-chandana', 'adithya'];
+  profs.forEach(pId => {
+    const items = pId === S.profileId ? S.items : (lsGet(`cmd.items_${pId}`, null) || defaultItemsFor(pId) || []);
+    items.forEach(it => {
+      if (it.person && profileIdForPerson(it.person) === pid) {
+        if (!all.some(x => x.id === it.id)) {
+          all.push({ ...it, fromProfileId: it.fromProfileId || pId });
+        }
+      }
+    });
+  });
+  return all;
+}
+
+function toggleInboxItem(id) {
+  const currentIt = S.items.find(x => x.id === id);
+  if (currentIt) {
+    currentIt.status = currentIt.status === 'done' ? 'open' : 'done';
+    currentIt.doneAt = currentIt.status === 'done' ? Date.now() : null;
+    saveItem(currentIt);
+  }
+  const profs = ['rahul', 'sri-chandana', 'adithya'];
+  profs.forEach(pId => {
+    if (pId !== S.profileId) {
+      const items = lsGet(`cmd.items_${pId}`, null);
+      if (items) {
+        const found = items.find(x => x.id === id);
+        if (found) {
+          found.status = found.status === 'done' ? 'open' : 'done';
+          found.doneAt = found.status === 'done' ? Date.now() : null;
+          lsSet(`cmd.items_${pId}`, items);
+        }
+      }
+    }
+  });
+  render();
+}
+
+function updateInboxPip() {
+  const myPid = S.profileId || 'rahul';
+  const items = getInboxItemsForProfile(myPid);
+  const unread = items.filter(i => i.status !== 'done').length;
+  $$('.inbox-pip').forEach(el => { el.hidden = !unread; });
+}

@@ -38,6 +38,7 @@
   <symbol id="i-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
   <symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6"/></symbol>
   <symbol id="i-plane" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M10.5 13.5 3 11l1.5-1.5 7.5 1L16.5 6c1-1 2.5-1.5 3-1s0 2-1 3L14 12.5l1 7.5L13.5 21 11 13.5"/></symbol>
+  <symbol id="i-inbox" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></symbol>
 </svg>
 
 <div class="app">
@@ -59,6 +60,7 @@
     <section class="view" id="v-home">
       <div class="topbar">
         <div class="grow"><div class="crumb">Rahul / <b>Home</b></div><div class="faint" id="greet" style="font-size:12.5px;margin-top:2px"></div></div>
+        <button class="icon-btn inbox-btn" data-action="open-inbox" aria-label="Inbox" title="Inbox & Messages" style="position:relative"><svg><use href="#i-inbox"/></svg><span class="pip inbox-pip" hidden style="position:absolute;top:6px;right:6px;width:7px;height:7px;background:var(--ink);border-radius:50%"></span></button>
         <button class="icon-btn" data-go="ask" aria-label="Ask"><svg><use href="#i-spark"/></svg></button>
         <button class="icon-btn" data-action="settings" aria-label="Settings"><svg><use href="#i-gear"/></svg></button>
       </div>
@@ -125,7 +127,8 @@
     <section class="view" id="v-clients" hidden>
       <div class="topbar">
         <div class="grow"><div class="crumb" id="clients-crumb">Rahul / <b>Businesses</b></div><h1 class="page-title" id="clients-title">Businesses</h1></div>
-        <button class="btn primary" id="clients-topbtn" data-action="new-business">New business</button>
+        <button class="icon-btn inbox-btn" data-action="open-inbox" aria-label="Inbox" title="Inbox & Messages" style="position:relative"><svg><use href="#i-inbox"/></svg><span class="pip inbox-pip" hidden style="position:absolute;top:6px;right:6px;width:7px;height:7px;background:var(--ink);border-radius:50%"></span></button>
+        <button class="btn primary" id="clients-topbtn" data-action="manage-businesses">Manage businesses</button>
       </div>
       <div id="biz-list" class="mfolders"></div>
       <div id="biz-head"></div>
@@ -182,20 +185,56 @@
     <!-- MY WORD -->
     <section class="view" id="v-word" hidden>
       <div class="topbar">
-        <div class="grow"><div class="crumb">Rahul / <b>My Word</b></div><h1 class="page-title">Promises I made</h1></div>
+        <div class="grow"><div class="crumb" id="word-crumb">Rahul / <b>My Word</b></div><h1 class="page-title">Promises & Focus</h1></div>
+        <button class="icon-btn inbox-btn" data-action="open-inbox" aria-label="Inbox" title="Inbox & Messages" style="position:relative"><svg><use href="#i-inbox"/></svg><span class="pip inbox-pip" hidden style="position:absolute;top:6px;right:6px;width:7px;height:7px;background:var(--ink);border-radius:50%"></span></button>
       </div>
-      <div class="pc">
-        <form class="prompt pc-box" id="pc-form" autocomplete="off">
-          <textarea id="pc-what" aria-label="Promise" placeholder="What did you promise? e.g. Send the revised brochure to Ravi"></textarea>
+
+      <!-- FOCUS (above all - even the promises you made) -->
+      <div class="card focus-box" style="padding:18px 20px;border-radius:16px;background:var(--surface);border:1px solid var(--hair);margin-bottom:24px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div>
+            <h2 style="font-size:18px;font-weight:600;margin:0">Focus</h2>
+            <p class="muted" style="font-size:12.5px;margin:2px 0 0">Daily priority to-do list</p>
+          </div>
+          <button class="btn small primary" id="word-focus-add" data-action="new-focus-task"><svg><use href="#i-plus"/></svg>Add task</button>
+        </div>
+        <div class="list" id="word-focus-list"></div>
+      </div>
+
+      <!-- RECTANGULAR BOX: WHAT DID YOU PROMISE -->
+      <div style="margin-bottom:24px">
+        <div class="sec-head"><h2>Make a promise</h2></div>
+        <form class="prompt pc-box" id="pc-form" autocomplete="off" style="margin-top:8px">
+          <textarea id="pc-what" aria-label="Promise" placeholder="What did you promise? e.g. Send the revised brochure to Team"></textarea>
           <div class="prompt-bar pc-bar">
-            <input class="pc-in" id="pc-who" placeholder="To whom" aria-label="To whom">
+            <select class="pc-in" id="pc-who" aria-label="To whom">
+              <option value="">To whom</option>
+              <option value="Adithya">Adithya</option>
+              <option value="Rahul">Rahul</option>
+              <option value="Chandana">Chandana</option>
+            </select>
             <select class="pc-in" id="pc-client" aria-label="Client"></select>
             <label class="tog"><input type="checkbox" id="pc-cal" checked>Add to Calendar</label>
             <span class="state" id="pc-state"></span>
             <button type="submit" class="send" aria-label="Save promise"><svg><use href="#i-up"/></svg></button>
           </div>
         </form>
-        <div class="sched">
+      </div>
+
+      <!-- OPEN & KEPT PROMISES (below the rectangular box) -->
+      <div style="margin-bottom:24px">
+        <div class="sec-head"><h2>Open promises</h2></div>
+        <div class="list" id="word-list" style="margin-top:8px"></div>
+      </div>
+      <div style="margin-bottom:28px">
+        <div class="sec-head"><h2>Kept promises</h2></div>
+        <div class="list" id="word-done" style="margin-top:12px"></div>
+      </div>
+
+      <!-- CALENDAR (below all!) -->
+      <div class="sched-wrapper">
+        <div class="sec-head"><h2>Schedule & Calendar</h2></div>
+        <div class="sched" style="margin-top:10px">
           <div class="sch-info" id="sch-info"></div>
           <div class="sch-cal">
             <div class="sch-head"><div><b id="sch-month"></b> <span class="faint" id="sch-year"></span></div>
@@ -209,20 +248,13 @@
           </div>
         </div>
       </div>
-      <div>
-        <div class="sec-head"><h2>Open</h2></div>
-        <div class="list" id="word-list" style="margin-top:8px"></div>
-      </div>
-      <div>
-        <div class="sec-head"><h2>Kept</h2></div>
-        <div class="list" id="word-done" style="margin-top:12px"></div>
-      </div>
     </section>
 
     <!-- MONEY -->
     <section class="view" id="v-money" hidden>
       <div class="topbar">
         <div class="grow"><div class="crumb">Rahul / <b>Money</b></div><h1 class="page-title">Money</h1></div>
+        <button class="icon-btn inbox-btn" data-action="open-inbox" aria-label="Inbox" title="Inbox & Messages" style="position:relative"><svg><use href="#i-inbox"/></svg><span class="pip inbox-pip" hidden style="position:absolute;top:6px;right:6px;width:7px;height:7px;background:var(--ink);border-radius:50%"></span></button>
         <button class="btn primary" data-action="new-payment">New payment</button>
       </div>
       <div class="stats" id="money-stats"></div>
@@ -255,7 +287,8 @@
     <section class="view" id="v-ask" hidden>
       <div class="topbar">
         <div class="grow"><div class="crumb">Rahul / <b>Ask</b></div><h1 class="page-title">Ask</h1></div>
-        <button class="btn small" id="chat-clear">New chat</button>
+        <button class="icon-btn inbox-btn" data-action="open-inbox" aria-label="Inbox" title="Inbox & Messages" style="position:relative"><svg><use href="#i-inbox"/></svg><span class="pip inbox-pip" hidden style="position:absolute;top:6px;right:6px;width:7px;height:7px;background:var(--ink);border-radius:50%"></span></button>
+        <button class="btn small" id="chat-clear">Chat</button>
       </div>
       <div class="hero">
         <div class="banner" role="img" aria-label="Open field at golden hour with a parked car"></div>
