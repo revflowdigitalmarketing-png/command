@@ -86,8 +86,8 @@ function promiseRow(it) {
     <button class="check" data-toggle="${it.id}" aria-label="${it.status === 'done' ? 'Mark not kept' : 'Mark kept'}"><svg><use href="#i-check"/></svg></button>
     <button class="body" data-edit="${it.id}">
       <span class="ttl">${esc(it.title)}</span>
-      <span class="when">${it.person ? `<span>To <b>${esc(it.person)}</b></span>` : ''}${c ? `<span>${esc(c.short || c.name)}</span>` : ''}</span>
-      <span class="when"><span>Due <b>${esc(whenTxt)}</b></span>${it.status !== 'done' && d.text ? `<span class="${d.cls === 'od' ? '' : 'faint'}" style="${d.cls === 'od' ? 'color:var(--ink);font-weight:600' : ''}">${esc(d.text)}</span>` : ''}</span>
+      <span class="when">${(it.fromProfileId && it.fromProfileId !== (S.profileId || 'rahul')) ? `<span>From <b>${esc(profileName(it.fromProfileId))}</b></span>` : (it.person ? `<span>To <b>${esc(it.person)}</b></span>` : '')}${c ? `<span>${esc(c.short || c.name)}</span>` : ''}</span>
+      <span class="when"><span><b>${esc(whenTxt)}</b></span>${it.status !== 'done' && d.text ? `<span class="${d.cls === 'od' ? '' : 'faint'}" style="${d.cls === 'od' ? 'color:var(--ink);font-weight:600' : ''}">${esc(d.text)}</span>` : ''}</span>
       <span class="when faint">${made ? `<span>Promised ${esc(made)}</span>` : ''}${kept ? `<span>Kept ${esc(kept)}</span>` : ''}</span>
     </button>
     <button class="more" data-edit="${it.id}" aria-label="Edit"><svg><use href="#i-dots"/></svg></button>
@@ -97,6 +97,18 @@ const PC = { month: (() => { const d = new Date(); const left = new Date(d.getFu
 function renderComposer() {
   const sel = $('#pc-client');
   if (sel && document.activeElement !== sel) { const v = sel.value; sel.innerHTML = `<option value="">No client</option>` + clients().map(c => `<option value="${c.id}">${esc(c.short || c.name)}</option>`).join(''); sel.value = v; }
+  const whoSel = $('#pc-who');
+  if (whoSel && document.activeElement !== whoSel) {
+    const curVal = whoSel.value;
+    const myPid = S.profileId || 'rahul';
+    const teammates = [
+      { id: 'sri-chandana', val: 'Chandana' },
+      { id: 'rahul', val: 'Rahul' },
+      { id: 'adithya', val: 'Adithya' }
+    ].filter(t => t.id !== myPid);
+    whoSel.innerHTML = `<option value="">To whom</option>` +
+      teammates.map(t => `<option value="${t.val}" ${curVal === t.val ? 'selected' : ''}>${t.val}</option>`).join('');
+  }
   const [y, m] = PC.month.split('-').map(Number);
   const first = new Date(y, m - 1, 1), days = new Date(y, m, 0).getDate();
   $('#sch-month').textContent = first.toLocaleDateString('en-IN', { month:'long' });
@@ -189,7 +201,7 @@ function renderWord() {
   const allFocus = [...openFocus, ...doneFocus];
   const focusList = $('#word-focus-list');
   if (focusList) {
-    focusList.innerHTML = allFocus.length ? allFocus.map(focusTaskRow).join('') : `<div class="empty">No focus tasks yet. Tap "+ Add task" to prioritize what to work on today.</div>`;
+    focusList.innerHTML = allFocus.length ? allFocus.map(focusTaskRow).join('') : `<div class="empty">No focus tasks yet. Tap "Manage tasks" to prioritize what to work on today.</div>`;
   }
 
   const ps = S.items.filter(i => i.kind === 'promise');

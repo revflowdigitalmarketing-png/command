@@ -1,3 +1,4 @@
 node_modules/
 dist/
 .DS_Store
+.agents/skills/expo-dynamic-notifications/repo/

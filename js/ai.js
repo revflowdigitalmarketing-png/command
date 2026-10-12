@@ -473,3 +473,159 @@ async function ask(q) {
   reply.pending = false;
   renderChat();
 }
+
+function md(s) {
+  const lines = esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').split('\n');
+  let out = '', inList = false;
+  for (const l of lines) {
+    const m = l.match(/^\s*[-•*]\s+(.*)/);
+    if (m) { if (!inList) { out += '<ul>'; inList = true; } out += `<li>${m[1]}</li>`; }
+    else { if (inList) { out += '</ul>'; inList = false; } out += l.trim() ? `<p>${l}</p>` : ''; }
+  }
+  return out + (inList ? '</ul>' : '');
+}
+
+function renderChat() {
+  const askSec = $('#v-ask');
+  if (askSec) askSec.classList.toggle('chatting', S.chat && S.chat.length > 0);
+  const chatEl = $('#chat');
+  if (chatEl) {
+    chatEl.innerHTML = S.chat && S.chat.length ? S.chat.map(m => m.role === 'user' ? `<div class="msg me">${esc(m.content)}</div>` :
+      `<div class="msg ai ${m.error ? 'err' : ''}">${m.content ? md(m.content) : '<span class="faint">…</span>'}</div>`).join('') :
+      '';
+    const last = chatEl.lastElementChild;
+    if (last && S.chat.length) last.scrollIntoView({ block:'nearest' });
+  }
+  renderInboxChat();
+}
+
+function renderInboxChat() {
+  const pane = $('#inbox-chat-pane');
+  if (!pane) return;
+  const isHidden = lsGet('cmd.inbox_hidden', false);
+  const layout = $('#ask-layout');
+  if (layout) layout.classList.toggle('inbox-hidden', isHidden);
+  const reopen = $('#inbox-reopen-btn');
+  if (reopen) reopen.style.display = isHidden ? 'inline-flex' : 'none';
+
+  const myPid = S.profileId || 'rahul';
+  const available = getAvailableChatContacts();
+  if (!available.length) {
+    pane.innerHTML = '';
+    return;
+  }
+
+  // Ensure active contact is not oneself and is valid
+  if (!S.inboxContactId || S.inboxContactId === myPid || !available.some(p => p.id === S.inboxContactId)) {
+    S.inboxContactId = available[0].id;
+  }
+  const contact = PROFILES.find(p => p.id === S.inboxContactId) || available[0];
+
+  // Retrieve chat messages & shared tasks
+  const rawMsgs = getChatMessages(myPid, contact.id).map(m => ({ ...m, isChatMsg: true }));
+  const rawTasks = getSharedTasksBetween(myPid, contact.id).map(t => ({ ...t, isChatMsg: false, time: t.created || t.doneAt || 0 }));
+  const combined = [...rawMsgs, ...rawTasks].sort((a, b) => (a.time || 0) - (b.time || 0));
+
+  const formatMsgTime = ts => {
+    if (!ts) return '';
+    const d = new Date(ts);
+    return d.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' });
+  };
+
+  pane.innerHTML = `
+    <div class="inbox-chat-card glass">
+      <!-- HEADER: Back button + Tabs & Contact Bar -->
+      <div class="inbox-card-head">
+        <div class="inbox-head-bar">
+          <button type="button" class="inbox-back-btn" data-action="close-inbox-pane" aria-label="Close inbox" title="Hide inbox">
+            <svg><use href="#i-back"/></svg>
+          </button>
+          <div class="inbox-contact-tabs" role="tablist">
+            ${available.map(p => `
+              <button type="button" class="inbox-contact-tab ${p.id === contact.id ? 'active' : ''}" data-chattab="${p.id}" role="tab" aria-selected="${p.id === contact.id}">
+                <span class="tab-pfp">${p.avatarLetter}</span>
+                <span class="tab-name">${esc(p.name)}</span>
+              </button>
+            `).join('')}
+          </div>
+        </div>
+        <div class="inbox-active-partner">
+          <div class="partner-left">
+            <span class="partner-avatar">${contact.avatarLetter}</span>
+            <b class="partner-name">${esc(contact.name)}</b>
+          </div>
+        </div>
+      </div>
+
+      <!-- MESSAGES FEED (Scrollable, openable with 0 messages) -->
+      <div class="inbox-chat-feed" id="inbox-chat-feed">
+        ${!combined.length ? `
+          <div class="inbox-empty-chat">
+            <div class="empty-icon">${contact.avatarLetter}</div>
+            <h3>Chat with ${esc(contact.name)}</h3>
+            <p>Send messages, promises, or updates directly to ${esc(contact.name)}.</p>
+            <div class="empty-quick-pills">
+              <button type="button" class="quick-msg-pill" data-quickmsg="Hey ${esc(contact.name)}!">"Hey ${esc(contact.name)}!"</button>
+              <button type="button" class="quick-msg-pill" data-quickmsg="Checking in on our updates.">"Checking in"</button>
+            </div>
+          </div>
+        ` : combined.map(item => {
+          if (item.isChatMsg) {
+            const isMe = item.from === myPid;
+            return `
+              <div class="chat-bubble-row ${isMe ? 'outgoing' : 'incoming'}">
+                ${!isMe ? `<span class="bubble-pfp">${contact.avatarLetter}</span>` : ''}
+                <div class="chat-bubble">
+                  <div class="bubble-text">${esc(item.text)}</div>
+                  <div class="bubble-time">${esc(formatMsgTime(item.time))}</div>
+                </div>
+              </div>
+            `;
+          } else {
+            // It's a shared promise/task
+            const isMe = item.fromProfileId === myPid;
+            const isDone = item.status === 'done';
+            const client = clientById(item.client);
+            return `
+              <div class="chat-bubble-row ${isMe ? 'outgoing' : 'incoming'}">
+                ${!isMe ? `<span class="bubble-pfp">${contact.avatarLetter}</span>` : ''}
+                <div class="chat-task-bubble ${isDone ? 'done' : ''}">
+                  <div class="task-bubble-header">
+                    <span class="task-badge">${isMe ? 'You promised ' + esc(contact.name) : esc(contact.name) + ' promised you'}</span>
+                    <span class="task-state-badge ${isDone ? 'kept' : 'open'}">${isDone ? 'Kept' : 'Open'}</span>
+                  </div>
+                  <div class="task-bubble-body">
+                    <button class="check" data-inboxtoggle="${item.id}" aria-label="${isDone ? 'Mark open' : 'Mark done'}">
+                      <svg><use href="#i-check"/></svg>
+                    </button>
+                    <div class="task-bubble-details">
+                      <div class="task-title ${isDone ? 'done-line' : ''}">${esc(item.title)}</div>
+                      ${client ? `<div class="faint" style="font-size:11.5px;margin-top:2px">${esc(client.short || client.name)}</div>` : ''}
+                      ${item.notes ? `<div class="faint" style="font-size:12px;margin-top:4px">${esc(item.notes)}</div>` : ''}
+                    </div>
+                  </div>
+                  <div class="bubble-time" style="margin-top:4px">${esc(formatMsgTime(item.time))}</div>
+                </div>
+              </div>
+            `;
+          }
+        }).join('')}
+      </div>
+
+      <!-- INPUT BAR -->
+      <form class="inbox-chat-input-bar" id="inbox-chat-form" autocomplete="off">
+        <input type="text" id="inbox-chat-text" placeholder="Message ${esc(contact.name)}…" autocomplete="off" aria-label="Chat message">
+        <button type="submit" class="send-btn" aria-label="Send message">
+          <svg><use href="#i-send"/></svg>
+        </button>
+      </form>
+    </div>
+  `;
+
+  // Auto-scroll feed to bottom
+  const feed = $('#inbox-chat-feed');
+  if (feed) {
+    feed.scrollTop = feed.scrollHeight;
+  }
+}
+

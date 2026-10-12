@@ -36,8 +36,8 @@ function renderMoney() {
       </button>
       <button class="cost" data-wish="${w.id}">${w.cost ? inr(w.cost) : '<span class="faint">Add price</span>'}</button>
     </div>`;
-  }).join('') : `<div class="empty">List what you want to buy: clothes, a new phone, the Airbnb. Tap "+ Add".</div>`;
-  $('#goals').innerHTML = goals.length ? goals.map(goalCard).join('') : `<div class="empty">No goals yet. Tap "+ Goal" to add Dubai or Bali.</div>`;
+  }).join('') : `<div class="empty">List what you want to buy: clothes, a new phone, the Airbnb. Tap "Manage".</div>`;
+  $('#goals').innerHTML = goals.length ? goals.map(goalCard).join('') : `<div class="empty">No goals yet. Tap "Manage" to add Dubai or Bali.</div>`;
   $('#pending').innerHTML = pending.length ? sortItems(pending).map(i => taskRow(i)).join('') : `<div class="empty">Nobody owes you anything right now.</div>`;
   $('#retainers').innerHTML = cl.length ? cl.map(c => `<button class="task" data-editclient="${c.id}" style="grid-template-columns:minmax(0,1fr) auto;text-align:left">
       <span class="stripe" style="background:${clientColor(c)}"></span>

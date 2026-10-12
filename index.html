@@ -3,7 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Rahul's Command</title>
+  <title>My Dashboard</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#0c0d11">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
@@ -39,6 +45,7 @@
   <symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6"/></symbol>
   <symbol id="i-plane" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M10.5 13.5 3 11l1.5-1.5 7.5 1L16.5 6c1-1 2.5-1.5 3-1s0 2-1 3L14 12.5l1 7.5L13.5 21 11 13.5"/></symbol>
   <symbol id="i-inbox" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></symbol>
 </svg>
 
 <div class="app">
@@ -48,11 +55,12 @@
     <button class="nav-btn" data-go="home"><svg><use href="#i-home"/></svg>Home<span class="count" data-count="home" hidden></span></button>
     <button class="nav-btn" data-go="clients"><svg><use href="#i-folder"/></svg>Businesses</button>
     <button class="nav-btn" data-go="word"><svg><use href="#i-bell"/></svg>My Word<span class="count" data-count="word" hidden></span></button>
+    <button class="nav-btn" data-go="crushers"><svg><use href="#i-target"/></svg>Goal Crushers</button>
     <button class="nav-btn" data-go="money"><svg><use href="#i-usd"/></svg>Money</button>
     <button class="nav-btn" data-go="ask"><svg><use href="#i-spark"/></svg>Ask</button>
     <div class="side-label">OTHER</div>
     <button class="nav-btn" data-action="settings"><svg><use href="#i-gear"/></svg>Settings</button>
-    <button class="profile" type="button" data-action="profiles" aria-label="Switch profile"><span class="pfp" id="side-pfp" aria-hidden="true">R</span><span class="pn"><b id="side-name">Rahul</b><small id="side-email">rahulchandrakondamu@gmail.com</small></span></button>
+    <button class="profile" type="button" data-action="profiles" aria-label="Switch or edit profile"><span class="pfp" id="side-pfp" aria-hidden="true">R</span><span class="pn"><b id="side-name">Rahul</b><small id="side-email">rahulchandrakondamu@gmail.com</small></span></button>
   </aside>
 
   <main class="main">
@@ -60,13 +68,14 @@
     <section class="view" id="v-home">
       <div class="topbar">
         <div class="grow"><div class="crumb">Rahul / <b>Home</b></div><div class="faint" id="greet" style="font-size:12.5px;margin-top:2px"></div></div>
-        <button class="icon-btn inbox-btn" data-action="open-inbox" aria-label="Inbox" title="Inbox & Messages" style="position:relative"><svg><use href="#i-inbox"/></svg><span class="pip inbox-pip" hidden style="position:absolute;top:6px;right:6px;width:7px;height:7px;background:var(--ink);border-radius:50%"></span></button>
         <button class="icon-btn" data-go="ask" aria-label="Ask"><svg><use href="#i-spark"/></svg></button>
         <button class="icon-btn" data-action="settings" aria-label="Settings"><svg><use href="#i-gear"/></svg></button>
       </div>
 
       <div class="hero">
-        <div class="banner" role="img" aria-label="Open field at golden hour with a parked car"></div>
+        <div class="banner" role="img" aria-label="Open field at golden hour with a parked car">
+          <button type="button" class="banner-edit-btn" data-action="customize-banner" aria-label="Edit picture" title="Edit picture"><svg><use href="#i-pen"/></svg></button>
+        </div>
         <h1 class="hero-q" id="hero-q">Good evening, Rahul. <span>What needs handling?</span></h1>
         <form class="prompt" id="dump-card" autocomplete="off">
           <textarea id="dump" aria-label="Notes" placeholder="Type or dictate your meeting notes, promises, payments…"></textarea>
@@ -95,13 +104,13 @@
         <div class="col">
 
           <div>
-            <div class="sec-head"><h2>Focus</h2><button class="link" data-action="new-item">+ Add</button></div>
+            <div class="sec-head"><h2>Focus</h2><button class="link" data-action="manage-focus">Manage</button></div>
             <div class="list" id="focus" style="margin-top:12px"></div>
           </div>
 
           <div>
-            <div class="sec-head"><h2>Next 7 days</h2></div>
-            <div class="list" id="upcoming" style="margin-top:12px"></div>
+            <div class="sec-head"><h2>This Week’s Crushers</h2><button class="link" data-go="crushers">Open</button></div>
+            <div class="list" id="crushers-mini" style="margin-top:12px"></div>
           </div>
         </div>
 
@@ -127,7 +136,7 @@
     <section class="view" id="v-clients" hidden>
       <div class="topbar">
         <div class="grow"><div class="crumb" id="clients-crumb">Rahul / <b>Businesses</b></div><h1 class="page-title" id="clients-title">Businesses</h1></div>
-        <button class="icon-btn inbox-btn" data-action="open-inbox" aria-label="Inbox" title="Inbox & Messages" style="position:relative"><svg><use href="#i-inbox"/></svg><span class="pip inbox-pip" hidden style="position:absolute;top:6px;right:6px;width:7px;height:7px;background:var(--ink);border-radius:50%"></span></button>
+        <button class="icon-btn" data-go="ask" aria-label="Ask & Chat"><svg><use href="#i-spark"/></svg></button>
         <button class="btn primary" id="clients-topbtn" data-action="manage-businesses">Manage businesses</button>
       </div>
       <div id="biz-list" class="mfolders"></div>
@@ -186,7 +195,7 @@
     <section class="view" id="v-word" hidden>
       <div class="topbar">
         <div class="grow"><div class="crumb" id="word-crumb">Rahul / <b>My Word</b></div><h1 class="page-title">Promises & Focus</h1></div>
-        <button class="icon-btn inbox-btn" data-action="open-inbox" aria-label="Inbox" title="Inbox & Messages" style="position:relative"><svg><use href="#i-inbox"/></svg><span class="pip inbox-pip" hidden style="position:absolute;top:6px;right:6px;width:7px;height:7px;background:var(--ink);border-radius:50%"></span></button>
+        <button class="icon-btn" data-go="ask" aria-label="Ask & Chat"><svg><use href="#i-spark"/></svg></button>
       </div>
 
       <!-- FOCUS (above all - even the promises you made) -->
@@ -196,7 +205,7 @@
             <h2 style="font-size:18px;font-weight:600;margin:0">Focus</h2>
             <p class="muted" style="font-size:12.5px;margin:2px 0 0">Daily priority to-do list</p>
           </div>
-          <button class="btn small primary" id="word-focus-add" data-action="new-focus-task"><svg><use href="#i-plus"/></svg>Add task</button>
+          <button class="btn small primary" id="word-focus-add" data-action="manage-focus"><svg><use href="#i-gear"/></svg>Manage tasks</button>
         </div>
         <div class="list" id="word-focus-list"></div>
       </div>
@@ -254,16 +263,16 @@
     <section class="view" id="v-money" hidden>
       <div class="topbar">
         <div class="grow"><div class="crumb">Rahul / <b>Money</b></div><h1 class="page-title">Money</h1></div>
-        <button class="icon-btn inbox-btn" data-action="open-inbox" aria-label="Inbox" title="Inbox & Messages" style="position:relative"><svg><use href="#i-inbox"/></svg><span class="pip inbox-pip" hidden style="position:absolute;top:6px;right:6px;width:7px;height:7px;background:var(--ink);border-radius:50%"></span></button>
-        <button class="btn primary" data-action="new-payment">New payment</button>
+        <button class="icon-btn" data-go="ask" aria-label="Ask & Chat"><svg><use href="#i-spark"/></svg></button>
+        <button class="btn primary" data-action="manage-payments">Manage payments</button>
       </div>
       <div class="stats" id="money-stats"></div>
       <div>
-        <div class="sec-head"><h2>Trip goals</h2><button class="link" data-action="new-goal">+ Goal</button></div>
+        <div class="sec-head"><h2>Trip goals</h2><button class="link" data-action="manage-goals">Manage</button></div>
         <div class="grid2" id="goals" style="margin-top:12px"></div>
       </div>
       <div>
-        <div class="sec-head"><h2 class="h-ico"><svg><use href="#i-cart"/></svg>Things to buy</h2><button class="link" data-action="new-wish">+ Add</button></div>
+        <div class="sec-head"><h2 class="h-ico"><svg><use href="#i-cart"/></svg>Things to buy</h2><button class="link" data-action="manage-wishlist">Manage</button></div>
         <div class="wish-total" id="wish-total" style="margin-top:8px"></div>
         <div class="list" id="wishlist" style="margin-top:8px"></div>
       </div>
@@ -283,32 +292,45 @@
       </div>
     </section>
 
+    <!-- GOAL CRUSHERS -->
+    <section class="view" id="v-crushers" hidden>
+      <div class="topbar">
+        <div class="grow"><div class="crumb" id="crushers-crumb">Rahul / <b>Goal Crushers</b></div><h1 class="page-title">Goal Crushers</h1></div>
+        <button class="icon-btn" data-go="ask" aria-label="Ask & Chat"><svg><use href="#i-spark"/></svg></button>
+      </div>
+      <div id="goal-crushers-container" class="goal-crushers-grid" style="margin-top:20px"></div>
+    </section>
+
     <!-- ASK -->
     <section class="view" id="v-ask" hidden>
       <div class="topbar">
-        <div class="grow"><div class="crumb">Rahul / <b>Ask</b></div><h1 class="page-title">Ask</h1></div>
-        <button class="icon-btn inbox-btn" data-action="open-inbox" aria-label="Inbox" title="Inbox & Messages" style="position:relative"><svg><use href="#i-inbox"/></svg><span class="pip inbox-pip" hidden style="position:absolute;top:6px;right:6px;width:7px;height:7px;background:var(--ink);border-radius:50%"></span></button>
-        <button class="btn small" id="chat-clear">Chat</button>
+        <div class="grow"><div class="crumb" id="ask-crumb">Rahul / <b>Ask</b></div><h1 class="page-title">Ask & Chat</h1></div>
+        <button class="btn small" id="inbox-reopen-btn" data-action="reopen-inbox" style="display:none"><svg><use href="#i-inbox"/></svg>Inbox</button>
       </div>
-      <div class="hero">
-        <div class="banner" role="img" aria-label="Open field at golden hour with a parked car"></div>
-        <h1 class="hero-q" id="ask-hero">At your service, Rahul. <span>What do you want to know?</span></h1>
-        <form class="prompt" id="ask-form" autocomplete="off">
-          <textarea id="ask-in" aria-label="Question" placeholder="Ask about your clients, deadlines, promises or money…"></textarea>
-          <div class="prompt-bar">
-            <span class="state" id="ask-state">Uses your Command data</span>
-            <button type="submit" class="send" aria-label="Send"><svg><use href="#i-up"/></svg></button>
+      <div class="ask-layout" id="ask-layout">
+        <div class="ask-ai-col">
+          <div class="hero">
+            <div class="banner" role="img" aria-label="Open field at golden hour with a parked car">
+              <button type="button" class="banner-edit-btn" data-action="customize-banner" aria-label="Edit picture" title="Edit picture"><svg><use href="#i-pen"/></svg></button>
+            </div>
+            <h1 class="hero-q" id="ask-hero">At your service, Rahul. <span>What do you want to know?</span></h1>
+            <form class="prompt" id="ask-form" autocomplete="off">
+              <textarea id="ask-in" aria-label="Question" placeholder="Ask about your clients, promises or money…"></textarea>
+              <div class="prompt-bar">
+                <span class="state" id="ask-state"></span>
+                <button type="submit" class="send" aria-label="Send"><svg><use href="#i-up"/></svg></button>
+              </div>
+            </form>
+            <div class="pills" id="suggest">
+              <button type="button">Which promises am I about to break?</button>
+              <button type="button">Am I on track for Bali?</button>
+              <button type="button">Who owes me money?</button>
+            </div>
           </div>
-        </form>
-        <div class="pills" id="suggest">
-          <button type="button">What's pending for Nirvi?</button>
-          <button type="button">Plan my tomorrow</button>
-          <button type="button">Which promises am I about to break?</button>
-          <button type="button">Am I on track for Bali?</button>
-          <button type="button">Who owes me money?</button>
+          <div class="chat" id="chat"></div>
         </div>
+        <div class="inbox-chat-pane" id="inbox-chat-pane"></div>
       </div>
-      <div class="chat" id="chat"></div>
     </section>
   </main>
 
@@ -333,7 +355,9 @@
 <script src="js/money.js"></script>
 <script src="js/calendar.js"></script>
 <script src="js/ai.js"></script>
+<script src="js/crushers.js"></script>
 <script src="js/sheets.js"></script>
+<script src="js/notifications.js"></script>
 <script src="js/events.js"></script>
 </body>
 </html>

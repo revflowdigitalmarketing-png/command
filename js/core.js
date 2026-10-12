@@ -79,7 +79,6 @@ function defaultSettingsFor(profileId) {
         { id: 'biz-content', name: 'Content Agency', kind: 'agency', tagline: '' }
       ],
       clients: [
-        { id: 'cl-1', name: 'Apex Media', short: 'Apex', stars: 5, retainer: 45000, yourShare: 32000, note: 'Social media & performance marketing', color: 0, signed: '2026-08-01', biz: 'biz-revflow' },
         { id: 'cl-2', name: 'Nova Studio', short: 'Nova', stars: 4, retainer: 35000, yourShare: 25000, note: 'Content creation & video campaigns', color: 1, signed: '2026-09-15', biz: 'biz-content' }
       ],
       goals: [
@@ -103,7 +102,6 @@ function defaultSettingsFor(profileId) {
         { id: 'biz-larping', name: 'LARPING', kind: 'product', tagline: '' }
       ],
       clients: [
-        { id: 'cl-1', name: 'Apex Media', short: 'Apex', stars: 5, retainer: 45000, yourShare: 32000, note: 'Social media & performance marketing', color: 0, signed: '2026-08-01', biz: 'biz-revflow' },
         { id: 'cl-2', name: 'Nova Studio', short: 'Nova', stars: 4, retainer: 35000, yourShare: 25000, note: 'Website maintenance & UI redesign', color: 1, signed: '2026-09-15', biz: 'biz-weblit' }
       ],
       goals: [
@@ -117,7 +115,7 @@ function defaultSettingsFor(profileId) {
       peakStart: '10:00', peakEnd: '13:00', dayStart: '09:00', dayEnd: '21:00'
     };
   }
-  // rahul
+  // rahul - identical business info, clients, goals, wishlist as Sri Chandana
   return {
     name: 'Rahul',
     email: 'rahulchandrakondamu@gmail.com',
@@ -127,7 +125,6 @@ function defaultSettingsFor(profileId) {
       { id: 'biz-larping', name: 'LARPING', kind: 'product', tagline: '' }
     ],
     clients: [
-      { id: 'cl-1', name: 'Apex Media', short: 'Apex', stars: 5, retainer: 45000, yourShare: 32000, note: 'Social media & performance marketing', color: 0, signed: '2026-08-01', biz: 'biz-revflow' },
       { id: 'cl-2', name: 'Nova Studio', short: 'Nova', stars: 4, retainer: 35000, yourShare: 25000, note: 'Website maintenance & UI redesign', color: 1, signed: '2026-09-15', biz: 'biz-weblit' }
     ],
     goals: [
@@ -145,18 +142,17 @@ function defaultSettingsFor(profileId) {
 function defaultItemsFor(profileId) {
   if (profileId === 'adithya') {
     return [
-      { id: 'it-4', kind: 'payment', title: 'Monthly retainer - September', client: 'cl-1', person: '', due: addDays(today(), -30), time: '', priority: 'med', status: 'done', doneAt: Date.now() - 2592000000, biz: 'biz-revflow', amount: 45000, notes: 'Received via UPI', stage: '', link: '', cal: null },
       { id: 'it-5', kind: 'payment', title: 'Content campaign - Milestone 1', client: 'cl-2', person: '', due: addDays(today(), -14), time: '', priority: 'med', status: 'done', doneAt: Date.now() - 1209600000, biz: 'biz-content', amount: 35000, notes: 'Received via Bank Transfer', stage: '', link: '', cal: null }
     ];
   }
   return [
-    { id: 'it-4', kind: 'payment', title: 'Monthly retainer - September', client: 'cl-1', person: '', due: addDays(today(), -30), time: '', priority: 'med', status: 'done', doneAt: Date.now() - 2592000000, biz: 'biz-revflow', amount: 45000, notes: 'Received via UPI', stage: '', link: '', cal: null },
     { id: 'it-5', kind: 'payment', title: 'Website UI redesign - Milestone 1', client: 'cl-2', person: '', due: addDays(today(), -14), time: '', priority: 'med', status: 'done', doneAt: Date.now() - 1209600000, biz: 'biz-weblit', amount: 35000, notes: 'Received via Bank Transfer', stage: '', link: '', cal: null },
     { id: 'it-6', kind: 'glitch', title: 'Audio desync when switching playback speed on mobile', client: '', person: '', due: '', time: '', priority: 'high', status: 'open', created: Date.now() - 30000000, biz: 'biz-larping', amount: 0, notes: '', stage: 'fixing', link: '', cal: null },
     { id: 'it-7', kind: 'glitch', title: 'Dark mode toggle flickers white on first load', client: '', person: '', due: '', time: '', priority: 'med', status: 'open', created: Date.now() - 60000000, biz: 'biz-larping', amount: 0, notes: '', stage: 'todo', link: '', cal: null },
     { id: 'it-8', kind: 'glitch', title: 'Video export fails on iOS Safari background tab', client: '', person: '', due: '', time: '', priority: 'med', status: 'done', doneAt: Date.now() - 10000000, created: Date.now() - 90000000, biz: 'biz-larping', amount: 0, notes: '', stage: 'fixed', link: '', cal: null },
     { id: 'it-9', kind: 'reel', title: 'Day in the life running 3 businesses at 22', client: '', person: '', due: '', time: '', priority: 'med', status: 'open', created: Date.now() - 20000000, biz: 'biz-larping', amount: 0, notes: 'Behind-the-scenes B-roll showing Command', stage: 'shoot', link: '', cal: null },
-    { id: 'it-10', kind: 'reel', title: 'Why I stopped using frameworks and built my own command center', client: '', person: '', due: addDays(today(), -2), time: '14:00', priority: 'high', status: 'done', doneAt: Date.now() - 86400000, biz: 'biz-larping', amount: 0, notes: 'Posted to IG Reels', stage: 'posted', link: 'https://instagram.com/reel/example', cal: null }
+    { id: 'it-10', kind: 'reel', title: 'Why I stopped using frameworks and built my own command center', client: '', person: '', due: addDays(today(), -2), time: '14:00', priority: 'high', status: 'done', doneAt: Date.now() - 86400000, biz: 'biz-larping', amount: 0, notes: 'Posted to IG Reels', stage: 'posted', link: 'https://instagram.com/reel/example', cal: null },
+    { id: 'it-11', kind: 'promise', title: 'Send revised wireframes and brochure', client: 'cl-2', person: 'Rahul', fromProfileId: 'sri-chandana', due: today(), time: '17:00', priority: 'high', status: 'open', created: Date.now() - 7200000, biz: 'biz-weblit', amount: 0, notes: 'Shared design draft for Nova Studio', stage: '', link: '', cal: null }
   ];
 }
 
@@ -166,17 +162,36 @@ const DEFAULT_ITEMS = () => defaultItemsFor(S?.profileId || lsGet('cmd.active_pr
 function getProfileSettings(pid) {
   const def = defaultSettingsFor(pid);
   const saved = lsGet(`cmd.settings_${pid}`, null) || (pid === 'rahul' ? lsGet('cmd.settings', null) : null) || {};
-  return { ...def, ...saved };
+  const merged = { ...def, ...saved };
+  if (Array.isArray(merged.clients)) {
+    merged.clients = merged.clients.filter(c => c.id !== 'cl-1' && !(c.name && c.name.toLowerCase().includes('apex')));
+  }
+  if (pid === 'sri-chandana') {
+    merged.streakStarted = lsGet('cmd.sri_streak_started', false);
+  }
+  if (pid === 'rahul') {
+    const sriDef = defaultSettingsFor('sri-chandana');
+    merged.businesses = sriDef.businesses;
+    merged.clients = sriDef.clients;
+    merged.goals = sriDef.goals;
+    merged.wishlist = sriDef.wishlist;
+  }
+  return merged;
 }
 
 function getProfileItems(pid) {
   const def = defaultItemsFor(pid);
   const saved = lsGet(`cmd.items_${pid}`, null) || (pid === 'rahul' ? lsGet('cmd.items', null) : null);
   const raw = Array.isArray(saved) && saved.length ? saved : def;
-  return raw.filter(i => !['it-1', 'it-2', 'it-3'].includes(i.id) && !(i.title && i.title.toLowerCase().includes('digital marketing')));
+  return raw.filter(i => 
+    !['it-1', 'it-2', 'it-3', 'it-4'].includes(i.id) &&
+    i.client !== 'cl-1' &&
+    !(i.title && (i.title.toLowerCase().includes('digital marketing') || i.title.toLowerCase().includes('apex')))
+  );
 }
 
 const activeProfileId = lsGet('cmd.active_profile', 'rahul');
+try { document.body.dataset.profile = activeProfileId; } catch {}
 const finalSettings = getProfileSettings(activeProfileId);
 const finalItems = getProfileItems(activeProfileId);
 
@@ -184,6 +199,30 @@ lsSet(`cmd.settings_${activeProfileId}`, finalSettings);
 lsSet(`cmd.items_${activeProfileId}`, finalItems);
 lsSet('cmd.settings', finalSettings);
 lsSet('cmd.items', finalItems);
+
+function applyBannerForProfile(pid = (S && S.profileId) || 'rahul') {
+  const customBanner = lsGet(`cmd.banner_${pid}`, null);
+  const banners = $$('.banner');
+  if (!banners.length) return;
+  banners.forEach(b => {
+    if (customBanner) {
+      b.style.setProperty('background-image', `url('${customBanner}')`, 'important');
+      b.style.setProperty('background-position', 'center center', 'important');
+      b.style.setProperty('background-size', 'cover', 'important');
+      b.setAttribute('aria-label', `${profileName(pid)}'s dashboard banner`);
+    } else if (pid === 'sri-chandana') {
+      b.style.setProperty('background-image', "url('assets/kung-fu-panda.jpg'), url('kung fu panda.jpg')", 'important');
+      b.style.setProperty('background-position', 'center 42%', 'important');
+      b.style.setProperty('background-size', 'cover', 'important');
+      b.setAttribute('aria-label', "Sri Chandana's dashboard - Po meditating under the blooming peach blossom tree");
+    } else {
+      b.style.setProperty('background-image', "url('assets/banner.jpg')", 'important');
+      b.style.setProperty('background-position', 'center 58%', 'important');
+      b.style.setProperty('background-size', 'cover', 'important');
+      b.setAttribute('aria-label', "Open field at golden hour with a parked car");
+    }
+  });
+}
 
 function readImageFile(file, maxWidth = 900, maxHeight = 600) {
   return new Promise((resolve, reject) => {
@@ -258,6 +297,7 @@ function switchProfile(pid, origin = null) {
   
   // Set new active profile
   S.profileId = pid;
+  document.body.dataset.profile = pid;
   lsSet('cmd.active_profile', pid);
   
   S.settings = getProfileSettings(pid);
@@ -267,6 +307,10 @@ function switchProfile(pid, origin = null) {
   
   S.biz = null;
   S.client = null;
+  S.view = 'home';
+  window.scrollTo({ top: 0, behavior: 'instant' });
+  if (typeof markEntering === 'function') markEntering('home');
+  applyBannerForProfile(pid);
   
   triggerWorldPortal(p, ox, oy);
   renderNow();
@@ -437,4 +481,99 @@ function updateInboxPip() {
   const items = getInboxItemsForProfile(myPid);
   const unread = items.filter(i => i.status !== 'done').length;
   $$('.inbox-pip').forEach(el => { el.hidden = !unread; });
+}
+
+function getAvailableChatContacts() {
+  const myPid = S.profileId || 'rahul';
+  return PROFILES.filter(p => p.id !== myPid);
+}
+
+function getChatMessages(p1, p2) {
+  const all = lsGet('cmd.chat_messages', []) || [];
+  return all.filter(m => (m.from === p1 && m.to === p2) || (m.from === p2 && m.to === p1));
+}
+
+function sendChatMessage(toPid, text) {
+  const myPid = S.profileId || 'rahul';
+  if (!text || !toPid) return null;
+  const all = lsGet('cmd.chat_messages', []) || [];
+  const msg = {
+    id: 'msg-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+    from: myPid,
+    to: toPid,
+    text: text.trim(),
+    time: Date.now()
+  };
+  all.push(msg);
+  lsSet('cmd.chat_messages', all);
+  return msg;
+}
+
+function getSharedTasksBetween(myPid, otherPid) {
+  const all = [];
+  const profs = ['rahul', 'sri-chandana', 'adithya'];
+  profs.forEach(pId => {
+    const items = pId === S.profileId ? S.items : (lsGet(`cmd.items_${pId}`, null) || defaultItemsFor(pId) || []);
+    items.forEach(it => {
+      const targetPid = profileIdForPerson(it.person);
+      const fromPid = it.fromProfileId || pId;
+      if (
+        (fromPid === myPid && targetPid === otherPid) ||
+        (fromPid === otherPid && targetPid === myPid)
+      ) {
+        if (!all.some(x => x.id === it.id)) all.push({ ...it, fromProfileId: fromPid });
+      }
+    });
+  });
+  return all;
+}
+
+function profileName(pid) {
+  if (pid === 'sri-chandana') return 'Sri Chandana';
+  if (pid === 'adithya') return 'Adithya';
+  if (pid === 'rahul') return 'Rahul';
+  const found = PROFILES.find(p => p.id === pid);
+  return found ? found.name : (pid || 'Teammate');
+}
+
+function applyCustomAppBranding(newName, newIcon) {
+  if (newName) lsSet('cmd.app_name', newName);
+  if (newIcon) lsSet('cmd.custom_icon', newIcon);
+  const appName = lsGet('cmd.app_name', 'My Dashboard');
+  document.title = appName;
+  const customIcon = lsGet('cmd.custom_icon', null);
+  if (customIcon) {
+    let iconLink = document.querySelector('link[rel="icon"]');
+    if (iconLink) iconLink.href = customIcon;
+    let appleLink = document.querySelector('link[rel="apple-touch-icon"]');
+    if (appleLink) appleLink.href = customIcon;
+    try {
+      const dynamicManifest = {
+        name: appName,
+        short_name: appName,
+        description: "Personal dashboard for businesses, clients, promises, money and trips.",
+        start_url: "./",
+        scope: "./",
+        display: "standalone",
+        background_color: "#0c0d11",
+        theme_color: "#0c0d11",
+        icons: [
+          { src: customIcon, sizes: "192x192", type: "image/png", purpose: "any maskable" },
+          { src: customIcon, sizes: "512x512", type: "image/png", purpose: "any maskable" }
+        ]
+      };
+      const blob = new Blob([JSON.stringify(dynamicManifest)], { type: 'application/manifest+json' });
+      let mLink = document.querySelector('link[rel="manifest"]');
+      if (mLink) mLink.href = URL.createObjectURL(blob);
+    } catch {}
+  }
+}
+applyCustomAppBranding();
+
+if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost')) {
+  window.addEventListener('load', () => {
+    try {
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
+    } catch {}
+  });
 }

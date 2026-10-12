@@ -4,7 +4,10 @@ let raf = 0;
 function render() { cancelAnimationFrame(raf); raf = requestAnimationFrame(renderNow); }
 function renderNow() {
   $$('[data-go]').forEach(b => { if (b.classList.contains('nav-btn') || b.classList.contains('tab')) b.setAttribute('aria-current', b.dataset.go === S.view ? 'page' : 'false'); });
-  ['home','clients','word','money','ask'].forEach(v => $('#v-' + v).hidden = S.view !== v);
+  ['home','clients','word','money','ask','crushers'].forEach(v => {
+    const el = $('#v-' + v);
+    if (el) el.hidden = S.view !== v;
+  });
   const lateAll = openItems().filter(isLate).length;
   const latePromises = openItems().filter(i => i.kind === 'promise' && isLate(i)).length;
   setCount('home', lateAll); setCount('word', latePromises);
@@ -14,6 +17,7 @@ function renderNow() {
   if (S.view === 'clients') renderClients();
   if (S.view === 'word') renderWord();
   if (S.view === 'money') renderMoney();
+  if (S.view === 'crushers' && typeof renderGoalCrushers === 'function') renderGoalCrushers();
   updateInboxPip();
 }
 function placeNavInd() {
@@ -30,7 +34,18 @@ function taskRow(it, opts = {}) {
   const d = dueLabel(it.due);
   const bits = [];
   if (opts.showClient !== false && c) bits.push(`<span><span class="chip"><span class="sw" style="background:${clientColor(c)}"></span>${esc(c.short || c.name)}</span></span>`);
-  if (it.kind !== 'task') bits.push(`<span>${KIND_LABEL[it.kind] || ''}${it.person ? ' · ' + esc(it.person) : ''}</span>`);
+  if (it.kind !== 'task') {
+    if (it.kind === 'promise') {
+      const isIncoming = it.fromProfileId && it.fromProfileId !== (S.profileId || 'rahul');
+      if (isIncoming) {
+        bits.push(`<span><span class="chip" style="font-weight:600;background:var(--surface-3);color:var(--ink);padding:1px 6px">From ${esc(profileName(it.fromProfileId))}</span></span>`);
+      } else {
+        bits.push(`<span>Promise${it.person ? ' to ' + esc(it.person) : ''}</span>`);
+      }
+    } else {
+      bits.push(`<span>${KIND_LABEL[it.kind] || ''}${it.person ? ' · ' + esc(it.person) : ''}</span>`);
+    }
+  }
   if (it.kind === 'payment' && it.status === 'done' && it.doneAt) bits.push(`<span>Received ${new Date(it.doneAt).toLocaleDateString('en-IN',{day:'numeric', month:'short', year:'numeric'})}</span>`);
   else if (d.text) bits.push(`<span class="${d.cls}"><svg><use href="#i-clock"/></svg> ${d.text}${it.time ? ', ' + fmtTime(it.time) : ''}</span>`);
   if (it.kind === 'payment') {
@@ -128,18 +143,8 @@ function renderHome() {
   }
   $('#hero-q').innerHTML = greetingHtml;
 
-  // Custom banner image per profile (Kung Fu Panda for Sri Chandana)
-  $$('.banner').forEach(b => {
-    if (pid === 'sri-chandana') {
-      b.style.backgroundImage = "url('assets/kung-fu-panda.jpg'), url('kung fu panda.jpg')";
-      b.style.backgroundPosition = "center 42%";
-      b.setAttribute('aria-label', "Sri Chandana's dashboard - Po meditating under the blooming peach blossom tree");
-    } else {
-      b.style.backgroundImage = "url('assets/banner.jpg')";
-      b.style.backgroundPosition = "center 58%";
-      b.setAttribute('aria-label', "Open field at golden hour with a parked car");
-    }
-  });
+  // Custom banner image per profile
+  applyBannerForProfile(pid);
 
   // Custom prompt placeholder per profile
   const dumpEl = $('#dump');
@@ -158,7 +163,7 @@ function renderHome() {
   const dueToday = open.filter(i => i.due === t);
   const todayEvents = S.events.filter(e => e.day === t);
   const chips = [];
-  if (dueToday.length) chips.push(`<span class="chip warn">${dueToday.length} due today</span>`);
+  if (dueToday.length) chips.push(`<span class="chip warn">${dueToday.length} today</span>`);
   if (todayEvents.length) chips.push(`<span class="chip">${todayEvents.length} on calendar today</span>`);
   $('#status-line').innerHTML = chips.join('');
 
@@ -172,28 +177,10 @@ function renderHome() {
   // late promises first
   focus.sort((a, b) => (isLate(b) && b.kind === 'promise') - (isLate(a) && a.kind === 'promise'));
   $('#focus').innerHTML = focus.length ? focus.slice(0, 12).map(i => taskRow(i)).join('') :
-    `<div class="empty">Nothing due today.</div>`;
+    `<div class="empty">No items scheduled today.</div>`;
 
-  const focusIds = new Set(focus.map(i => i.id));
-  const up = sortItems(open.filter(i => i.kind !== 'note' && i.kind !== 'glitch' && !focusIds.has(i.id) && validDate(i.due) && dayDiff(i.due) > 0 && dayDiff(i.due) <= 7));
-  $('#upcoming').innerHTML = up.length ? up.map(i => taskRow(i)).join('') : `<div class="empty">Nothing scheduled for the coming week.</div>`;
-
-  // my word mini
-  const pr = sortItems(open.filter(i => i.kind === 'promise')).slice(0, 3);
-  $('#word-mini').innerHTML = pr.length ? pr.map(i => taskRow(i)).join('') : `<div class="empty">No open promises. Add one when you give someone your word.</div>`;
-
-  // trips mini (if present)
-  const tm = $('#trips-mini');
-  if (tm) {
-    const goals = S.settings.goals || [];
-    tm.innerHTML = goals.length ? goals.map(g => {
-      const pct = g.target ? Math.min(100, Math.round((g.saved || 0) / g.target * 100)) : 0;
-      return `<button class="card" data-goal="${g.id}" style="padding:14px 16px;text-align:left;display:flex;flex-direction:column;gap:10px">
-        <span style="display:flex;justify-content:space-between;gap:8px;align-items:baseline"><b style="font-size:15px">${esc(g.name)}</b>
-        <span class="mono muted" style="font-size:12.5px">${g.target ? `${inr(g.saved)} / ${inr(g.target)}` : 'Set a target'}</span></span>
-        <span class="bar"><i style="width:${pct}%"></i></span></button>`;
-    }).join('') : `<div class="empty">Add Dubai and Bali in Money to track your savings.</div>`;
-  }
+  // This Week's Crushers mini list on Home
+  if (typeof renderCrushersMini === 'function') renderCrushersMini();
 
   renderStreak();
   renderDay();
@@ -288,7 +275,9 @@ function ringSvg(frac) {
 }
 function renderStreak() {
   const t = today();
-  const started = !!S.settings.streakStarted;
+  const pid = (S && S.profileId) || 'rahul';
+  const isSri = pid === 'sri-chandana';
+  const started = isSri ? !!lsGet('cmd.sri_streak_started', false) : !!S.settings.streakStarted;
   let streak = 0;
   if (started) {
     const todaySt = dayStatus(t);
@@ -321,12 +310,12 @@ function renderStreak() {
     <div class="streak-top"><div><small>STREAK</small><b>${streak}<span>${streak === 1 ? 'DAY' : 'DAYS'}</span></b></div>
       <div style="display:flex;align-items:center;gap:10px">
         ${!started ? `<button type="button" class="btn small primary" data-action="start-streak" style="padding:4px 12px;font-size:12px;height:28px">Start</button>` : ''}
-        <div class="faint" style="font-size:12px;text-align:right;max-width:18ch">A tick means nothing was left overdue that day</div>
+        <div class="faint" style="font-size:12px;text-align:right;max-width:18ch">A tick means all tasks completed that day</div>
       </div>
     </div>
     <div class="week">${week}</div>
     <div class="streak-bar"><small>TODAY</small>
-      <div class="row"><b>${doneN}<span> / ${dueToday.length} done</span></b><span class="faint" style="font-size:12.5px">${dueToday.length ? pct + '%' : 'Nothing due'}</span></div>
+      <div class="row"><b>${doneN}<span> / ${dueToday.length} done</span></b><span class="faint" style="font-size:12.5px">${dueToday.length ? pct + '%' : 'All caught up'}</span></div>
       <div class="bar"><i style="width:${pct}%"></i></div></div>`;
 }
 const nowLine = t => `<div class="now"><span>${fmtTime(t)}</span><i></i></div>`;

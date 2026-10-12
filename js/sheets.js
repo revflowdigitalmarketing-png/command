@@ -1,14 +1,31 @@
 /* Command · Edit pop-ups (items, clients, goals, payments, settings). */
 /* ================= sheets ================= */
+let closeSheetTimer = null;
 function openSheet(html, onReady) {
-  $('#sheet').innerHTML = html; $('#scrim').hidden = false;
+  if (closeSheetTimer) {
+    clearTimeout(closeSheetTimer);
+    closeSheetTimer = null;
+  }
+  const sc = $('#scrim');
+  sc.classList.remove('closing');
+  sc.hidden = false;
+  $('#sheet').innerHTML = html;
   onReady && onReady($('#sheet'));
-  const f = $('#sheet').querySelector('input,select,textarea'); f && setTimeout(() => f.focus(), 50);
+  const f = $('#sheet').querySelector('input,select,textarea');
+  f && setTimeout(() => f.focus(), 50);
 }
 function closeSheet() {
-  const sc = $('#scrim'); if (sc.hidden || sc.classList.contains('closing')) return;
+  const sc = $('#scrim');
+  if (sc.hidden || sc.classList.contains('closing')) return;
+  if (closeSheetTimer) clearTimeout(closeSheetTimer);
   sc.classList.add('closing');
-  setTimeout(() => { sc.classList.remove('closing'); sc.hidden = true; $('#sheet').innerHTML = ''; }, 190);
+  closeSheetTimer = setTimeout(() => {
+    sc.classList.remove('closing');
+    sc.hidden = true;
+    $('#sheet').innerHTML = '';
+    closeSheetTimer = null;
+    if (typeof applyBannerForProfile === 'function') applyBannerForProfile(S.profileId || 'rahul');
+  }, 190);
 }
 const clientOptions = sel => `<option value="">No client</option>` + clients().map(c => `<option value="${c.id}" ${c.id === sel ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
 
@@ -72,10 +89,7 @@ function editFocusTask(id) {
       <div class="field"><label for="ft-client">Client</label><select class="in" id="ft-client">${clientOptions(it.client)}</select></div>
       <div class="field"><label for="ft-cat">Type</label><select class="in" id="ft-cat">${FOCUS_CATEGORIES.map(c => `<option value="${c}" ${c === curCat ? 'selected' : ''}>${c}</option>`).join('')}</select></div>
     </div>
-    <div class="frow">
-      <div class="field"><label for="ft-due">Due date</label><input class="in" type="date" id="ft-due" value="${it.due || today()}"></div>
-      <div class="field"><label for="ft-prio">Priority</label><select class="in" id="ft-prio"><option value="high" ${it.priority==='high'?'selected':''}>High</option><option value="med" ${it.priority==='med'?'selected':''}>Medium</option><option value="low" ${it.priority==='low'?'selected':''}>Low</option></select></div>
-    </div>
+    <div class="field"><label for="ft-prio">Priority</label><select class="in" id="ft-prio"><option value="high" ${it.priority==='high'?'selected':''}>High</option><option value="med" ${it.priority==='med'?'selected':''}>Medium</option><option value="low" ${it.priority==='low'?'selected':''}>Low</option></select></div>
     <div class="field"><label for="ft-notes">Notes (optional)</label><textarea class="in" id="ft-notes" placeholder="Details or links">${esc(it.notes || '')}</textarea></div>
     <div class="sheet-actions">
       ${isNew ? '' : `<button class="btn danger left" id="ft-del" type="button">Delete</button>`}
@@ -86,7 +100,7 @@ function editFocusTask(id) {
       it.title = $('#ft-title').value.trim();
       it.client = $('#ft-client').value;
       it.category = $('#ft-cat').value;
-      it.due = $('#ft-due').value;
+      it.due = it.due || today();
       it.priority = $('#ft-prio').value;
       it.notes = $('#ft-notes').value;
       it.isFocus = true;
@@ -236,9 +250,9 @@ function openManageBusinesses() {
       <button class="btn primary" id="mb-close">Done</button>
     </div>`, sh => {
     sh.querySelector('#mb-close').onclick = closeSheet;
-    sh.querySelector('#mb-add').onclick = () => { closeSheet(); editBusiness(null); };
+    sh.querySelector('#mb-add').onclick = () => { editBusiness(null); };
     sh.querySelectorAll('[data-editbiz]').forEach(btn => {
-      btn.onclick = () => { closeSheet(); editBusiness(btn.dataset.editbiz); };
+      btn.onclick = () => { editBusiness(btn.dataset.editbiz); };
     });
     sh.querySelectorAll('[data-delbiz]').forEach(btn => {
       btn.onclick = () => {
@@ -291,9 +305,9 @@ function openManageClients(bizId = null) {
       <button class="btn primary" id="mc-close">Done</button>
     </div>`, sh => {
     sh.querySelector('#mc-close').onclick = closeSheet;
-    sh.querySelector('#mc-add').onclick = () => { closeSheet(); editClient(null, bizId); };
+    sh.querySelector('#mc-add').onclick = () => { editClient(null, bizId); };
     sh.querySelectorAll('[data-editclient]').forEach(btn => {
-      btn.onclick = () => { closeSheet(); editClient(btn.dataset.editclient); };
+      btn.onclick = () => { editClient(btn.dataset.editclient); };
     });
     sh.querySelectorAll('[data-delclient]').forEach(btn => {
       btn.onclick = () => {
@@ -471,7 +485,7 @@ function logPayment(clientId) {
 
     sh.querySelectorAll('[data-pst]').forEach(b => b.onclick = () => {
       status = b.dataset.pst; sh.querySelectorAll('[data-pst]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
-      $('#p-date-l').textContent = status === 'received' ? 'Date received' : 'Due date';
+      $('#p-date-l').textContent = status === 'received' ? 'Date received' : 'Date';
     });
     sh.querySelector('#p-cancel').onclick = closeSheet;
     sh.querySelector('#p-save').onclick = async () => {
@@ -582,6 +596,388 @@ function openProfileSheet() {
   });
 }
 
+function openManageFocus() {
+  const focusItems = S.items.filter(i => (i.isFocus || i.kind === 'task') && i.kind !== 'promise' && i.kind !== 'glitch' && i.kind !== 'reel' && i.kind !== 'payment' && i.kind !== 'note');
+  openSheet(`<h2>Manage Focus Tasks</h2>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <p class="muted" style="font-size:13px;margin:0">Add, edit, or delete focus items</p>
+      <button class="btn primary small" id="mf-add"><svg><use href="#i-plus"/></svg>Add focus task</button>
+    </div>
+    <div class="manage-list">
+      ${focusItems.length ? focusItems.map(it => {
+        const c = clientById(it.client);
+        const cat = it.category || 'Other';
+        const isDone = it.status === 'done';
+        return `<div class="manage-item ${isDone ? 'done' : ''}">
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:6px">
+              <b style="font-size:14.5px;${isDone ? 'text-decoration:line-through;color:var(--muted)' : ''}">${esc(it.title)}</b>
+              <span class="chip" style="font-size:10.5px;padding:0 6px">${esc(cat)}</span>
+            </div>
+            <div class="faint" style="font-size:12px;margin-top:2px">
+              ${c ? esc(c.short || c.name) + ' · ' : ''}Status: ${isDone ? 'Done' : 'Open'}
+            </div>
+          </div>
+          <button class="btn small" data-editfocustask="${it.id}"><svg><use href="#i-pen"/></svg>Edit</button>
+          <button class="btn small danger" data-delfocus="${it.id}">Delete</button>
+        </div>`;
+      }).join('') : '<div class="empty">No focus tasks yet. Tap "Add focus task" above.</div>'}
+    </div>
+    <div class="sheet-actions" style="margin-top:16px">
+      <button class="btn primary" id="mf-close">Done</button>
+    </div>`, sh => {
+    sh.querySelector('#mf-close').onclick = closeSheet;
+    sh.querySelector('#mf-add').onclick = () => { editFocusTask(null); };
+    sh.querySelectorAll('[data-editfocustask]').forEach(btn => {
+      btn.onclick = () => { editFocusTask(btn.dataset.editfocustask); };
+    });
+    sh.querySelectorAll('[data-delfocus]').forEach(btn => {
+      btn.onclick = () => {
+        const id = btn.dataset.delfocus;
+        if (btn.dataset.sure) {
+          removeItem(id);
+          toast('Task deleted.');
+          openManageFocus();
+        } else {
+          btn.dataset.sure = '1';
+          btn.textContent = 'Sure?';
+        }
+      };
+    });
+  });
+}
+
+function openManageGoals() {
+  const gList = S.settings.goals || [];
+  openSheet(`<h2>Manage Trip Goals</h2>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <p class="muted" style="font-size:13px;margin:0">Add, edit, or delete trip savings goals</p>
+      <button class="btn primary small" id="mg-add"><svg><use href="#i-plus"/></svg>Add goal</button>
+    </div>
+    <div class="manage-list">
+      ${gList.length ? gList.map(g => {
+        return `<div class="manage-item">
+          <div style="flex:1;min-width:0">
+            <b style="font-size:14.5px">${esc(g.name)}</b>
+            <div class="muted" style="font-size:12px;margin-top:2px">
+              Target: ${inr(g.target)} · Saved: ${inr(g.saved || 0)} (${Math.round((g.saved||0)/g.target*100)}%)
+            </div>
+          </div>
+          <button class="btn small" data-editgoal="${g.id}"><svg><use href="#i-pen"/></svg>Edit</button>
+          <button class="btn small danger" data-delgoal="${g.id}">Delete</button>
+        </div>`;
+      }).join('') : '<div class="empty">No goals yet. Tap "Add goal" above.</div>'}
+    </div>
+    <div class="sheet-actions" style="margin-top:16px">
+      <button class="btn primary" id="mg-close">Done</button>
+    </div>`, sh => {
+    sh.querySelector('#mg-close').onclick = closeSheet;
+    sh.querySelector('#mg-add').onclick = () => { editGoal(null); };
+    sh.querySelectorAll('[data-editgoal]').forEach(btn => {
+      btn.onclick = () => { editGoal(btn.dataset.editgoal); };
+    });
+    sh.querySelectorAll('[data-delgoal]').forEach(btn => {
+      btn.onclick = () => {
+        const gid = btn.dataset.delgoal;
+        if (btn.dataset.sure) {
+          S.settings.goals = (S.settings.goals || []).filter(x => x.id !== gid);
+          saveSettings();
+          toast('Goal deleted.');
+          openManageGoals();
+        } else {
+          btn.dataset.sure = '1';
+          btn.textContent = 'Sure?';
+        }
+      };
+    });
+  });
+}
+
+function openManageWishlist() {
+  const wList = S.settings.wishlist || [];
+  openSheet(`<h2>Manage Things to Buy</h2>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <p class="muted" style="font-size:13px;margin:0">Add, edit, or delete items on your wishlist</p>
+      <button class="btn primary small" id="mw-add"><svg><use href="#i-plus"/></svg>Add item</button>
+    </div>
+    <div class="manage-list">
+      ${wList.length ? wList.map(w => {
+        return `<div class="manage-item ${w.bought ? 'done' : ''}">
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:6px">
+              <b style="font-size:14.5px;${w.bought ? 'text-decoration:line-through;color:var(--muted)' : ''}">${esc(w.name)}</b>
+              <span class="chip" style="font-size:10.5px;padding:0 6px">${esc(w.cat || 'General')}</span>
+            </div>
+            <div class="muted" style="font-size:12px;margin-top:2px">
+              Cost: ${inr(w.cost)} · ${w.bought ? 'Bought' : 'Not bought'}
+            </div>
+          </div>
+          <button class="btn small" data-editwish="${w.id}"><svg><use href="#i-pen"/></svg>Edit</button>
+          <button class="btn small danger" data-delwish="${w.id}">Delete</button>
+        </div>`;
+      }).join('') : '<div class="empty">No items yet. Tap "Add item" above.</div>'}
+    </div>
+    <div class="sheet-actions" style="margin-top:16px">
+      <button class="btn primary" id="mw-close">Done</button>
+    </div>`, sh => {
+    sh.querySelector('#mw-close').onclick = closeSheet;
+    sh.querySelector('#mw-add').onclick = () => { editWish(null); };
+    sh.querySelectorAll('[data-editwish]').forEach(btn => {
+      btn.onclick = () => { editWish(btn.dataset.editwish); };
+    });
+    sh.querySelectorAll('[data-delwish]').forEach(btn => {
+      btn.onclick = () => {
+        const wid = btn.dataset.delwish;
+        if (btn.dataset.sure) {
+          S.settings.wishlist = (S.settings.wishlist || []).filter(x => x.id !== wid);
+          saveSettings();
+          toast('Item deleted.');
+          openManageWishlist();
+        } else {
+          btn.dataset.sure = '1';
+          btn.textContent = 'Sure?';
+        }
+      };
+    });
+  });
+}
+
+function openManagePayments() {
+  const pList = S.items.filter(i => i.kind === 'payment');
+  openSheet(`<h2>Manage Payments</h2>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <p class="muted" style="font-size:13px;margin:0">Log, edit, or delete received and pending payments</p>
+      <button class="btn primary small" id="mp-add"><svg><use href="#i-plus"/></svg>Log payment</button>
+    </div>
+    <div class="manage-list">
+      ${pList.length ? pList.map(p => {
+        const c = clientById(p.client);
+        const isReceived = p.status === 'done';
+        return `<div class="manage-item">
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:6px">
+              <b style="font-size:14.5px">${esc(p.title || 'Payment')}</b>
+              <span class="chip ${isReceived ? 'fin' : ''}" style="font-size:10.5px;padding:0 6px">${isReceived ? 'Received' : 'Pending'}</span>
+            </div>
+            <div class="muted" style="font-size:12px;margin-top:2px">
+              ${c ? esc(c.short || c.name) + ' · ' : ''}Amount: <b class="mono">${inr(p.amount || 0)}</b>
+            </div>
+          </div>
+          <button class="btn small" data-edit="${p.id}"><svg><use href="#i-pen"/></svg>Edit</button>
+          <button class="btn small danger" data-delpay="${p.id}">Delete</button>
+        </div>`;
+      }).join('') : '<div class="empty">No payments logged yet. Tap "Log payment" above.</div>'}
+    </div>
+    <div class="sheet-actions" style="margin-top:16px">
+      <button class="btn primary" id="mp-close">Done</button>
+    </div>`, sh => {
+    sh.querySelector('#mp-close').onclick = closeSheet;
+    sh.querySelector('#mp-add').onclick = () => { logPayment(''); };
+    sh.querySelectorAll('[data-edit]').forEach(btn => {
+      btn.onclick = () => { editItem(btn.dataset.edit); };
+    });
+    sh.querySelectorAll('[data-delpay]').forEach(btn => {
+      btn.onclick = () => {
+        const pid = btn.dataset.delpay;
+        if (btn.dataset.sure) {
+          removeItem(pid);
+          toast('Payment deleted.');
+          openManagePayments();
+        } else {
+          btn.dataset.sure = '1';
+          btn.textContent = 'Sure?';
+        }
+      };
+    });
+  });
+}
+
+function openBannerCustomizer() {
+  const pid = S.profileId || 'rahul';
+  const curBanner = lsGet(`cmd.banner_${pid}`, null) || (pid === 'sri-chandana' ? 'kung fu panda.jpg' : 'assets/banner.jpg');
+  
+  openSheet(`<h2>Customize Cover Banner</h2>
+    <p class="muted" style="font-size:13px;margin-bottom:14px">Change the hero banner image at the top of your dashboard.</p>
+    
+    <div style="width:100%;aspect-ratio:16/7;border-radius:12px;background-image:url('${esc(curBanner)}');background-size:cover;background-position:center;border:1px solid var(--hair);box-shadow:0 8px 24px rgba(0,0,0,0.3);margin-bottom:16px;position:relative;overflow:hidden" id="banner-custom-preview">
+      <span style="position:absolute;bottom:8px;right:8px;padding:3px 8px;border-radius:6px;background:rgba(0,0,0,0.65);font-size:11px;color:rgba(255,255,255,0.85);backdrop-filter:blur(6px)">Live preview</span>
+    </div>
+
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px">
+      <label class="btn small primary" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px">
+        <svg><use href="#i-pen"/></svg>Upload custom picture
+        <input type="file" id="banner-file-input" accept="image/*" style="display:none">
+      </label>
+      <input class="in" id="banner-url-input" placeholder="Or paste image URL" style="flex:1" value="${curBanner.startsWith('data:') ? '' : esc(curBanner)}">
+    </div>
+
+    <div class="field" style="margin-bottom:18px">
+      <label style="display:block;margin-bottom:8px">Or Pick a Preset Picture</label>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+        <button type="button" class="btn small" data-setbanner="assets/banner.jpg" style="padding:6px 4px;font-size:11.5px">Golden Hour</button>
+        <button type="button" class="btn small" data-setbanner="kung fu panda.jpg" style="padding:6px 4px;font-size:11.5px">Peach Tree</button>
+        <button type="button" class="btn small" data-setbanner="assets/bali.jpg" style="padding:6px 4px;font-size:11.5px">Bali Beach</button>
+        <button type="button" class="btn small" data-setbanner="assets/dubai.jpg" style="padding:6px 4px;font-size:11.5px">Dubai</button>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--surface-2);border-radius:12px;border:1px solid var(--hair);margin-bottom:16px">
+      <div>
+        <b style="font-size:13px;display:block">Web App Icon & Name</b>
+        <span class="muted" style="font-size:11.5px">Customize icon before downloading</span>
+      </div>
+      <button type="button" class="btn small primary" id="banner-open-appicon"><svg><use href="#i-pen"/></svg>Customize</button>
+    </div>
+
+    <div class="sheet-actions">
+      <button class="btn danger left" id="banner-reset" type="button">Reset default</button>
+      <button class="btn" id="banner-cancel" type="button">Cancel</button>
+      <button class="btn primary" id="banner-save" type="button">Apply Picture</button>
+    </div>`, sh => {
+    let pendingBanner = curBanner;
+
+    const updatePreviewAndSite = url => {
+      pendingBanner = url;
+      const prevEl = sh.querySelector('#banner-custom-preview');
+      if (prevEl) prevEl.style.backgroundImage = `url('${url}')`;
+      $$('.banner').forEach(b => {
+        b.style.setProperty('background-image', `url('${url}')`, 'important');
+        b.style.setProperty('background-position', 'center center', 'important');
+        b.style.setProperty('background-size', 'cover', 'important');
+      });
+    };
+
+    sh.querySelector('#banner-cancel').onclick = () => {
+      applyBannerForProfile(pid);
+      closeSheet();
+    };
+
+    sh.querySelector('#banner-file-input').onchange = async e => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      try {
+        const dataUrl = await readImageFile(file, 1600, 900);
+        updatePreviewAndSite(dataUrl);
+        toast('Picture loaded in preview! Tap "Apply Picture" to save.');
+      } catch (err) {
+        toast('Could not load image: ' + err.message);
+      }
+    };
+
+    sh.querySelector('#banner-url-input').oninput = e => {
+      const val = e.target.value.trim();
+      if (val) {
+        updatePreviewAndSite(val);
+      }
+    };
+
+    sh.querySelectorAll('[data-setbanner]').forEach(btn => {
+      btn.onclick = () => {
+        updatePreviewAndSite(btn.dataset.setbanner);
+      };
+    });
+
+    sh.querySelector('#banner-open-appicon').onclick = () => {
+      applyBannerForProfile(pid);
+      closeSheet();
+      openIconCustomizer();
+    };
+
+    sh.querySelector('#banner-reset').onclick = () => {
+      lsSet(`cmd.banner_${pid}`, null);
+      applyBannerForProfile(pid);
+      closeSheet();
+      renderHome();
+      toast('Banner reset to default.');
+    };
+
+    sh.querySelector('#banner-save').onclick = () => {
+      lsSet(`cmd.banner_${pid}`, pendingBanner);
+      applyBannerForProfile(pid);
+      closeSheet();
+      toast('Banner picture updated!');
+    };
+  });
+}
+
+function openIconCustomizer() {
+  const curName = lsGet('cmd.app_name', 'My Dashboard');
+  const curIcon = lsGet('cmd.custom_icon', 'icon-192.png');
+  openSheet(`<h2>Customize App Picture & Name</h2>
+    <p class="muted" style="font-size:13px;margin-bottom:16px">Personalize the dashboard picture and app title before installing/downloading the web app.</p>
+    
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;padding:16px;background:var(--surface-2);border-radius:14px;border:1px solid var(--hair)">
+      <img id="custom-icon-preview" src="${esc(curIcon)}" alt="App Icon Preview" style="width:68px;height:68px;border-radius:16px;box-shadow:0 6px 20px rgba(0,0,0,0.3);object-fit:cover;background:#0c0d11;flex-shrink:0">
+      <div style="flex:1;min-width:0">
+        <b style="font-size:15px;display:block" id="custom-name-preview">${esc(curName)}</b>
+        <span class="muted" style="font-size:12px">Web App Icon (192×192 / 512×512)</span>
+        <div style="margin-top:8px">
+          <label class="btn small primary" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer">
+            <svg><use href="#i-pen"/></svg>Upload custom picture
+            <input type="file" id="icon-file-input" accept="image/*" style="display:none">
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="custom-app-name">App Name</label>
+      <input class="in" id="custom-app-name" value="${esc(curName)}" placeholder="My Dashboard">
+    </div>
+
+    <div class="field" style="margin-top:14px">
+      <label style="display:block;margin-bottom:8px">Or Pick a Preset Picture</label>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+        <button type="button" class="btn small" data-setpreseticon="default" style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:14px;border-radius:4px;background:var(--ink);display:inline-block"></span>Dashboard</button>
+        <button type="button" class="btn small" data-setpreseticon="galaxy" style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:14px;border-radius:4px;background:var(--muted);display:inline-block"></span>Galaxy</button>
+        <button type="button" class="btn small" data-setpreseticon="panda" style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:14px;border-radius:4px;background:var(--surface-3);border:1px solid var(--hair);display:inline-block"></span>Panda</button>
+      </div>
+    </div>
+
+    <div class="sheet-actions" style="margin-top:20px">
+      <button class="btn" id="custom-cancel" type="button">Cancel</button>
+      <button class="btn primary" id="custom-save" type="button">Save & Apply Picture</button>
+    </div>`, sh => {
+    let pendingIcon = curIcon;
+
+    sh.querySelector('#custom-cancel').onclick = closeSheet;
+
+    sh.querySelector('#custom-app-name').oninput = e => {
+      sh.querySelector('#custom-name-preview').textContent = e.target.value.trim() || 'My Dashboard';
+    };
+
+    sh.querySelector('#icon-file-input').onchange = async e => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      try {
+        const dataUrl = await readImageFile(file, 512, 512);
+        pendingIcon = dataUrl;
+        sh.querySelector('#custom-icon-preview').src = dataUrl;
+        toast('Picture loaded. Tap "Save & Apply Picture" to confirm.');
+      } catch (err) {
+        toast('Could not load image: ' + err.message);
+      }
+    };
+
+    sh.querySelectorAll('[data-setpreseticon]').forEach(btn => {
+      btn.onclick = () => {
+        const p = btn.dataset.setpreseticon;
+        if (p === 'galaxy') pendingIcon = 'galaxy.png';
+        else if (p === 'panda') pendingIcon = 'kung fu panda.jpg';
+        else pendingIcon = 'icon-192.png';
+        sh.querySelector('#custom-icon-preview').src = pendingIcon;
+      };
+    });
+
+    sh.querySelector('#custom-save').onclick = () => {
+      const newName = sh.querySelector('#custom-app-name').value.trim() || 'My Dashboard';
+      applyCustomAppBranding(newName, pendingIcon);
+      closeSheet();
+      toast('Custom picture applied! You can now download the web app.');
+    };
+  });
+}
+
 function editSettings() {
   const st = S.settings;
   const pid = S.profileId || 'rahul';
@@ -592,6 +988,29 @@ function editSettings() {
         ${PROFILES.map(p => `<button type="button" class="btn small ${p.id === pid ? 'primary' : ''}" data-switchprofile="${p.id}">${esc(p.name)}</button>`).join('')}
       </div>
     </div>
+    
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--surface-2);border-radius:12px;border:1px solid var(--hair);margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <img src="${esc(lsGet('cmd.custom_icon', 'icon-192.png'))}" style="width:36px;height:36px;border-radius:10px;object-fit:cover;background:#0c0d11">
+        <div>
+          <b style="font-size:13.5px;display:block">${esc(lsGet('cmd.app_name', 'My Dashboard'))}</b>
+          <span class="faint" style="font-size:11.5px">Customize icon & app name</span>
+        </div>
+      </div>
+      <button type="button" class="btn small primary" id="s-customize-icon"><svg><use href="#i-pen"/></svg>Customize</button>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--surface-2);border-radius:12px;border:1px solid var(--hair);margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:36px;height:36px;border-radius:10px;background:var(--surface-3);display:grid;place-items:center;color:var(--ink)"><svg style="width:18px;height:18px"><use href="#i-bell"/></svg></div>
+        <div>
+          <b style="font-size:13.5px;display:block">Deadline & Post Reminders</b>
+          <span class="faint" style="font-size:11.5px">Dynamic alerts & reminder lead times</span>
+        </div>
+      </div>
+      <button type="button" class="btn small primary" id="s-open-reminders"><svg><use href="#i-gear"/></svg>Configure</button>
+    </div>
+
     <div class="field"><label for="s-name">Your name</label><input class="in" id="s-name" value="${esc(st.name)}"></div>
     <div class="field"><label for="s-email">Email</label><input class="in" id="s-email" value="${esc(st.email || '')}"></div>
     <div class="frow">
@@ -606,6 +1025,8 @@ function editSettings() {
     <div class="sheet-actions"><button class="btn danger left" id="s-reset" type="button">Reset businesses & data</button><button class="btn" id="s-cancel">Cancel</button><button class="btn primary" id="s-save">Save</button></div>`, sh => {
     sh.querySelector('#s-cancel').onclick = closeSheet;
     sh.querySelector('#s-reset').onclick = () => { closeSheet(); resetToDefaults(); };
+    sh.querySelector('#s-customize-icon').onclick = () => { closeSheet(); openIconCustomizer(); };
+    sh.querySelector('#s-open-reminders').onclick = () => { closeSheet(); openNotificationSettingsSheet(); };
     sh.querySelector('#s-save').onclick = () => {
       st.name = $('#s-name').value.trim() || 'Rahul';
       if ($('#s-email')) st.email = $('#s-email').value.trim();
@@ -614,6 +1035,7 @@ function editSettings() {
     };
   });
 }
+
 
 function openInboxSheet() {
   const myPid = S.profileId || 'rahul';
