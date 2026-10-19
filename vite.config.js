@@ -43,10 +43,21 @@ function mergeStore(current, incoming) {
     result.pending_deletion_requests = current.pending_deletion_requests;
   }
 
-  // 4. Deleted item IDs (if client explicitly deleted items, biz, clients)
-  const deletedItemIds = new Set(Array.isArray(incoming.deletedItemIds) ? incoming.deletedItemIds : []);
-  const deletedBizIds = new Set(Array.isArray(incoming.deletedBizIds) ? incoming.deletedBizIds : []);
-  const deletedClientIds = new Set(Array.isArray(incoming.deletedClientIds) ? incoming.deletedClientIds : []);
+  // 4. Deleted item IDs (merge current and incoming, persist permanently)
+  const curDeletedItems = Array.isArray(current.deletedItemIds) ? current.deletedItemIds : [];
+  const incDeletedItems = Array.isArray(incoming.deletedItemIds) ? incoming.deletedItemIds : [];
+  const deletedItemIds = new Set([...curDeletedItems, ...incDeletedItems]);
+  result.deletedItemIds = Array.from(deletedItemIds);
+
+  const curDeletedBiz = Array.isArray(current.deletedBizIds) ? current.deletedBizIds : [];
+  const incDeletedBiz = Array.isArray(incoming.deletedBizIds) ? incoming.deletedBizIds : [];
+  const deletedBizIds = new Set([...curDeletedBiz, ...incDeletedBiz]);
+  result.deletedBizIds = Array.from(deletedBizIds);
+
+  const curDeletedClients = Array.isArray(current.deletedClientIds) ? current.deletedClientIds : [];
+  const incDeletedClients = Array.isArray(incoming.deletedClientIds) ? incoming.deletedClientIds : [];
+  const deletedClientIds = new Set([...curDeletedClients, ...incDeletedClients]);
+  result.deletedClientIds = Array.from(deletedClientIds);
 
   // 5. Shared Businesses master sync:
   const bizMap = new Map();
@@ -243,7 +254,22 @@ function dashboardStorePlugin() {
           } catch {}
           const merged = mergeStore(current, incoming);
           merged.lastUpdated = Date.now();
-          fs.writeFileSync(dataFile, JSON.stringify(merged, null, 2), 'utf-8');
+          const mergedJson = JSON.stringify(merged, null, 2);
+          fs.writeFileSync(dataFile, mergedJson, 'utf-8');
+
+          // Keep js/seed-data.js in sync so any git push has latest state
+          try {
+            const seedJsFile = path.resolve(__dirname, 'js', 'seed-data.js');
+            fs.writeFileSync(seedJsFile, '/* Command · Auto-generated Seed Store Snapshot */\nwindow.__INITIAL_STORE__ = ' + JSON.stringify(merged) + ';\n', 'utf-8');
+          } catch {}
+
+          // Keep public/data/dashboard-store.json in sync for static hosting
+          try {
+            const publicDataDir = path.resolve(__dirname, 'public', 'data');
+            if (!fs.existsSync(publicDataDir)) fs.mkdirSync(publicDataDir, { recursive: true });
+            fs.writeFileSync(path.resolve(publicDataDir, 'dashboard-store.json'), mergedJson, 'utf-8');
+          } catch {}
+
           res.setHeader('Content-Type', 'application/json');
           res.end(JSON.stringify({ ok: true, lastUpdated: merged.lastUpdated }));
         } catch (err) {
@@ -283,8 +309,49 @@ function dashboardStorePlugin() {
   };
 }
 
+function distCopyPlugin() {
+  return {
+    name: 'dist-copy-plugin',
+    closeBundle() {
+      const distDir = path.resolve(__dirname, 'dist');
+      if (!fs.existsSync(distDir)) return;
+
+      // Copy js directory
+      const srcJs = path.resolve(__dirname, 'js');
+      const distJs = path.resolve(distDir, 'js');
+      if (fs.existsSync(srcJs)) {
+        fs.cpSync(srcJs, distJs, { recursive: true });
+      }
+
+      // Copy data directory
+      const srcData = path.resolve(__dirname, 'data');
+      const distData = path.resolve(distDir, 'data');
+      if (fs.existsSync(srcData)) {
+        fs.cpSync(srcData, distData, { recursive: true });
+      }
+
+      // Copy static standalone assets
+      ['sw.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'galaxy.png', 'inside out.jpg', 'kung fu panda.jpg', 'nice illustration.jpg', 'up.jpg', 'viviesteria.jpg'].forEach(file => {
+        const src = path.resolve(__dirname, file);
+        const dest = path.resolve(distDir, file);
+        if (fs.existsSync(src)) {
+          fs.copyFileSync(src, dest);
+        }
+      });
+
+      // Copy assets directory if exists
+      const srcAssets = path.resolve(__dirname, 'assets');
+      const distAssets = path.resolve(distDir, 'assets');
+      if (fs.existsSync(srcAssets)) {
+        fs.cpSync(srcAssets, distAssets, { recursive: true });
+      }
+    }
+  };
+}
+
 export default defineConfig({
-  plugins: [dashboardStorePlugin()],
+  base: './',
+  plugins: [dashboardStorePlugin(), distCopyPlugin()],
   server: {
     port: 5173,
     host: true

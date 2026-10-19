@@ -1,5 +1,5 @@
 // Command PWA Service Worker
-const CACHE_NAME = 'command-pwa-v37';
+const CACHE_NAME = 'command-pwa-v44';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -7,6 +7,7 @@ const ASSETS_TO_CACHE = [
   './manifest.webmanifest',
   './icon-192.png',
   './icon-512.png',
+  './js/seed-data.js',
   './js/core.js',
   './js/home.js',
   './js/businesses.js',
@@ -18,6 +19,7 @@ const ASSETS_TO_CACHE = [
   './js/sheets.js',
   './js/notifications.js',
   './js/events.js',
+  './data/dashboard-store.json',
   './assets/banner.jpg',
   './assets/kung-fu-panda.jpg'
 ];

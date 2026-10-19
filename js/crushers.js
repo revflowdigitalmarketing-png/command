@@ -1,6 +1,10 @@
 /* Command · Goal Crushers table scoreboard and rewards */
 
 function defaultCrushersFor(pid) {
+  const seed = (typeof window !== 'undefined' && window.__INITIAL_STORE__) || {};
+  if (seed[`crushers_${pid}`]) {
+    return JSON.parse(JSON.stringify(seed[`crushers_${pid}`]));
+  }
   return {
     weekTitle: '( WEEK 01 )  This Week’s Focus:',
     focusGoal: '',

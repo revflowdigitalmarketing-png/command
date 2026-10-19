@@ -8,7 +8,7 @@ function renderNow() {
       b.setAttribute('aria-current', b.dataset.go === S.view ? 'page' : 'false');
     }
   });
-  ['home','clients','word','money','ask','crushers'].forEach(v => {
+  ['home', 'clients', 'word', 'money', 'ask', 'crushers'].forEach(v => {
     const el = $('#v-' + v);
     if (el) el.hidden = S.view !== v;
   });
@@ -32,9 +32,22 @@ function placeNavInd() {
 }
 function setCount(k, n) { const el = $(`[data-count="${k}"]`); if (el) { el.hidden = !n; el.textContent = n; } }
 
+function balanceTitleText(str) {
+  if (!str) return '';
+  const words = str.trim().split(/\s+/);
+  if (words.length <= 2) return esc(str);
+  // Bind trailing 25-30% of words (at least 2 words) with non-breaking spaces so no single word is stranded on line 2
+  let boundCount = Math.max(2, Math.ceil(words.length * 0.28));
+  boundCount = Math.min(boundCount, words.length - 1);
+  const leadWords = words.slice(0, words.length - boundCount);
+  const tailWords = words.slice(words.length - boundCount);
+  return esc(leadWords.join(' ')) + (leadWords.length ? ' ' : '') + esc(tailWords.join('\u00A0'));
+}
+
 function taskRow(it, opts = {}) {
   const c = clientById(it.client);
   const d = dueLabel(it.due);
+  const hideToday = opts.hideToday || S.view === 'home';
   const bits = [];
   if (it.kind === 'payment') {
     const myShare = paymentShare(it);
@@ -45,12 +58,12 @@ function taskRow(it, opts = {}) {
       bits.push(`<span><span class="chip" style="font-weight:500;background:var(--surface-3);color:var(--ink);padding:1px 6px">${esc(it.person)}</span></span>`);
     }
     if (it.status === 'done' && it.doneAt) {
-      bits.push(`<span class="faint">Received ${new Date(it.doneAt).toLocaleDateString('en-IN',{day:'numeric', month:'short'})}</span>`);
+      bits.push(`<span class="faint">Received ${new Date(it.doneAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>`);
     } else if (validDate(it.due)) {
       const dd = dayDiff(it.due);
       if (dd < 0) {
         bits.push(`<span class="od"><svg><use href="#i-clock"/></svg> ${Math.abs(dd) === 1 ? '1 day late' : Math.abs(dd) + ' days late'}</span>`);
-      } else if (d.text) {
+      } else if (d.text && !(hideToday && d.text === 'Today')) {
         bits.push(`<span class="${d.cls || 'faint'}"><svg><use href="#i-clock"/></svg> ${d.text}</span>`);
       }
     }
@@ -69,14 +82,20 @@ function taskRow(it, opts = {}) {
       }
     }
     if (it.status === 'done' && it.doneAt) bits.push(`<span>Done</span>`);
-    else if (d.text && d.cls !== 'od' && !d.text.includes('late')) bits.push(`<span class="${d.cls}"><svg><use href="#i-clock"/></svg> ${d.text}${it.time ? ', ' + fmtTime(it.time) : ''}</span>`);
+    else if (d.text && d.cls !== 'od' && !d.text.includes('late')) {
+      if (hideToday && d.text === 'Today') {
+        // Do not display 'Today' or time below tasks on homepage
+      } else {
+        bits.push(`<span class="${d.cls}"><svg><use href="#i-clock"/></svg> ${d.text}${it.time ? ', ' + fmtTime(it.time) : ''}</span>`);
+      }
+    }
     if (it.cal) bits.push(`<span title="On Google Calendar"><svg><use href="#i-cal"/></svg></span>`);
   }
   return `<div class="task ${it.status === 'done' ? 'done' : ''}" data-id="${it.id}">
     <button class="check" data-toggle="${it.id}" aria-label="${it.status === 'done' ? 'Mark not done' : 'Mark done'}"><svg><use href="#i-check"/></svg></button>
     <span class="stripe" style="background:${c ? clientColor(c) : PRIO_COLOR[it.priority]}"></span>
     <button class="body" data-edit="${it.id}">
-      <span class="ttl" style="font-weight:400">${esc(it.title)}</span>
+      <span class="ttl" style="font-weight:400">${balanceTitleText(it.title)}</span>
       ${bits.length ? `<span class="sub">${bits.join('')}</span>` : ''}
     </button>
     <button class="more" data-edit="${it.id}" aria-label="Edit"><svg><use href="#i-dots"/></svg></button>
@@ -85,7 +104,7 @@ function taskRow(it, opts = {}) {
 const sortItems = arr => arr.sort((a, b) => {
   const ad = validDate(a.due) ? a.due : '9999', bd = validDate(b.due) ? b.due : '9999';
   if (ad !== bd) return ad < bd ? -1 : 1;
-  const pr = { high:0, med:1, low:2 };
+  const pr = { high: 0, med: 1, low: 2 };
   if (pr[a.priority] !== pr[b.priority]) return pr[a.priority] - pr[b.priority];
   return (a.time || '99') < (b.time || '99') ? -1 : 1;
 });
@@ -119,7 +138,7 @@ function renderHome() {
   const pid = S.profileId || 'rahul';
   const nm = S.settings.name || (pid === 'sri-chandana' ? 'Sri Chandana' : pid === 'adithya' ? 'Adithya' : 'Rahul');
   updateProfileCrumbs();
-  $('#greet').textContent = new Date().toLocaleDateString('en-IN',{weekday:'long', day:'numeric', month:'long'});
+  $('#greet').textContent = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
 
   // Tailored 2-line greetings per profile
   let greetingHtml = '';
@@ -177,7 +196,6 @@ function renderHome() {
   const dueToday = open.filter(i => i.due === t && (i.kind === 'task' || i.isFocus) && i.kind !== 'reel');
   const todayEvents = S.events.filter(e => e.day === t);
   const chips = [];
-  if (dueToday.length) chips.push(`<span class="chip warn">${dueToday.length} today</span>`);
   if (todayEvents.length) chips.push(`<span class="chip">${todayEvents.length} on calendar today</span>`);
   $('#status-line').innerHTML = chips.join('');
 
@@ -250,7 +268,7 @@ function clientMatchesEvent(c, e) {
 function renderDay(scope) {
   // scope: undefined = home, or a client id
   const c = scope ? clientById(scope) : null;
-  const ids = scope ? { strip:'#c-strip', tl:'#c-timeline', label:'#c-day-label', key:'cday' } : { strip:'#strip', tl:'#timeline', label:'#day-label', key:'day' };
+  const ids = scope ? { strip: '#c-strip', tl: '#c-timeline', label: '#c-day-label', key: 'cday' } : { strip: '#strip', tl: '#timeline', label: '#day-label', key: 'day' };
   if (!$(ids.strip)) return;
   const t = today();
   const days = Array.from({ length: 7 }, (_, i) => addDays(t, i));
@@ -261,9 +279,9 @@ function renderDay(scope) {
   $(ids.strip).innerHTML = days.map(d => {
     const dt = parseYmd(d);
     const has = evAll.some(e => e.day === d) || itAll.some(i => i.due === d);
-    return `<button class="dpill" data-day="${d}" data-scope="${scope || ''}" aria-pressed="${d === sel}"><small>${dt.toLocaleDateString('en-IN',{weekday:'short'}).toUpperCase()}</small><b>${dt.getDate()}</b>${has ? '<span class="has"></span>' : ''}</button>`;
+    return `<button class="dpill" data-day="${d}" data-scope="${scope || ''}" aria-pressed="${d === sel}"><small>${dt.toLocaleDateString('en-IN', { weekday: 'short' }).toUpperCase()}</small><b>${dt.getDate()}</b>${has ? '<span class="has"></span>' : ''}</button>`;
   }).join('');
-  $(ids.label).textContent = (sel === t ? 'Today, ' + parseYmd(sel).toLocaleDateString('en-IN',{day:'numeric', month:'long'}) : fmtDate(sel)) + (c ? ` · ${c.short || c.name}` : '');
+  $(ids.label).textContent = (sel === t ? 'Today, ' + parseYmd(sel).toLocaleDateString('en-IN', { day: 'numeric', month: 'long' }) : fmtDate(sel)) + (c ? ` · ${c.short || c.name}` : '');
   const evs = evAll.filter(e => e.day === sel).map(e => ({ t: e.allDay ? '' : e.time, title: e.title, sub: e.allDay ? 'All day' : `${fmtTime(e.time)}${e.endTime ? ' – ' + fmtTime(e.endTime) : ''}`, link: e.link, loc: e.location }));
   const calIds = new Set(S.events.map(e => e.id));
   const its = itAll.filter(i => i.due === sel && !(i.cal && calIds.has(i.cal.id))).map(i => {
@@ -300,7 +318,7 @@ function dayStatus(d) {
 }
 function ringSvg(frac) {
   const r = 13, c = 2 * Math.PI * r, f = Math.max(0, Math.min(1, frac));
-  return `<svg class="ring" viewBox="0 0 30 30" aria-hidden="true"><circle cx="15" cy="15" r="${r}" fill="none" stroke="var(--surface-3)" stroke-width="3"/><circle cx="15" cy="15" r="${r}" fill="none" stroke="var(--ink)" stroke-width="3" stroke-linecap="round" stroke-dasharray="${(c*f).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 15 15)"/></svg>`;
+  return `<svg class="ring" viewBox="0 0 30 30" aria-hidden="true"><circle cx="15" cy="15" r="${r}" fill="none" stroke="var(--surface-3)" stroke-width="3"/><circle cx="15" cy="15" r="${r}" fill="none" stroke="var(--ink)" stroke-width="3" stroke-linecap="round" stroke-dasharray="${(c * f).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 15 15)"/></svg>`;
 }
 function renderStreak() {
   const el = $('#streak');
@@ -321,7 +339,7 @@ function renderStreak() {
   const dow = (now.getDay() + 6) % 7; // Monday = 0
   const monday = addDays(t, -dow);
   const week = Array.from({ length: 7 }, (_, i) => addDays(monday, i)).map(day => {
-    const lbl = parseYmd(day).toLocaleDateString('en-IN', { weekday:'short' });
+    const lbl = parseYmd(day).toLocaleDateString('en-IN', { weekday: 'short' });
     if (day > t) return `<div class="wd"><i></i>${lbl}</div>`;
     const st = dayStatus(day);
     if (day === t && !st.ok) {
@@ -401,7 +419,7 @@ function renderFocusSection(focus) {
     <div class="focus-group">
       <div class="focus-group-subhead">${esc(g.name.toUpperCase())}</div>
       <div class="focus-group-tasks">
-        ${g.items.map(it => taskRow(it)).join('')}
+        ${g.items.map(it => taskRow(it, { hideToday: true })).join('')}
       </div>
     </div>
   `;
@@ -458,30 +476,8 @@ function renderWeekStrip() {
     `;
   }).join('');
 
-  // Events preview for selected day (single line)
-  const selEvs = evAll.filter(e => e.day === sel).map(e => ({
-    time: e.allDay ? '' : e.time,
-    title: e.title || 'Untitled event'
-  }));
-  const selCalTasks = openTasks.filter(i => i.due === sel && i.cal && !calIds.has(i.cal.id)).map(i => ({
-    time: i.time || '',
-    title: i.title
-  }));
-  const allSel = [...selEvs, ...selCalTasks].sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99'));
-
-  let previewHtml = '';
-  if (!allSel.length) {
-    previewHtml = `<span class="week-strip-empty">Nothing on this day</span>`;
-  } else {
-    previewHtml = allSel.map(e => {
-      const timeStr = e.time ? `<span class="week-strip-time">${esc(fmtTime(e.time))}</span> ` : '';
-      return `${timeStr}${esc(e.title)}`;
-    }).join('  ·  ');
-  }
-
   container.innerHTML = `
     <div class="week-strip-days">${daysHtml}</div>
-    <div class="week-strip-events" id="week-strip-events">${previewHtml}</div>
   `;
 }
 const nowLine = t => `<div class="now"><span>${fmtTime(t)}</span><i></i></div>`;

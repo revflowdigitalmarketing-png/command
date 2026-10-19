@@ -14,11 +14,7 @@ function go(view) {
   if (view === 'ask') {
     S.inboxContactId = null;
     renderChat();
-    const isHidden = lsGet('cmd.inbox_hidden', false);
-    const layout = $('#ask-layout');
-    if (layout) layout.classList.toggle('inbox-hidden', isHidden);
-    const reopen = $('#inbox-reopen-btn');
-    if (reopen) reopen.style.display = isHidden ? 'inline-flex' : 'none';
+    if (typeof updateAskLayoutPanes === 'function') updateAskLayoutPanes();
     setTimeout(() => {
       const askIn = $('#ask-in');
       if (askIn && !S.inboxFocused) askIn.focus();
@@ -57,6 +53,7 @@ document.addEventListener('click', e => {
     if (d.focusInbox) {
       S.inboxFocused = true;
       lsSet('cmd.inbox_hidden', false);
+      lsSet('cmd.notif_hidden', true);
     } else if (d.go === 'ask') {
       S.inboxFocused = false;
     }
@@ -90,22 +87,64 @@ document.addEventListener('click', e => {
   if (d.newreel) { editReel(null, d.newreel); return; }
   if (d.rweek) { S.rweek = (S.rweek || 0) + Number(d.rweek); renderNow(); return; }
   if (d.action === 'close-inbox-pane') {
-    const layout = $('#ask-layout');
-    if (layout) layout.classList.add('inbox-hidden');
-    const reopen = $('#inbox-reopen-btn');
-    if (reopen) reopen.style.display = 'inline-flex';
     lsSet('cmd.inbox_hidden', true);
     S.inboxContactId = null;
+    if (typeof updateAskLayoutPanes === 'function') updateAskLayoutPanes();
     return;
   }
-  if (d.action === 'reopen-inbox') {
-    const layout = $('#ask-layout');
-    if (layout) layout.classList.remove('inbox-hidden');
-    const reopen = $('#inbox-reopen-btn');
-    if (reopen) reopen.style.display = 'none';
-    lsSet('cmd.inbox_hidden', false);
+  if (d.action === 'toggle-inbox-pane' || d.action === 'reopen-inbox') {
+    const isCurHidden = lsGet('cmd.inbox_hidden', false);
+    if (isCurHidden) {
+      lsSet('cmd.inbox_hidden', false);
+      lsSet('cmd.notif_hidden', true);
+    } else {
+      lsSet('cmd.inbox_hidden', true);
+    }
     S.inboxContactId = null;
-    renderInboxChat();
+    if (typeof updateAskLayoutPanes === 'function') updateAskLayoutPanes();
+    if (typeof renderInboxChat === 'function') renderInboxChat();
+    return;
+  }
+  if (d.action === 'close-notif-pane') {
+    lsSet('cmd.notif_hidden', true);
+    if (typeof updateAskLayoutPanes === 'function') updateAskLayoutPanes();
+    return;
+  }
+  if (d.action === 'toggle-notif-pane') {
+    const isCurHidden = lsGet('cmd.notif_hidden', true);
+    if (isCurHidden) {
+      lsSet('cmd.notif_hidden', false);
+      lsSet('cmd.inbox_hidden', true);
+    } else {
+      lsSet('cmd.notif_hidden', true);
+    }
+    if (typeof updateAskLayoutPanes === 'function') updateAskLayoutPanes();
+    if (typeof renderNotificationsPane === 'function') renderNotificationsPane();
+    return;
+  }
+  if (d.action === 'approve-del-req') {
+    const reqId = t.dataset.reqId;
+    if (reqId && typeof confirmCoOwnerDeletion === 'function') {
+      confirmCoOwnerDeletion(reqId, true);
+    }
+    return;
+  }
+  if (d.action === 'decline-del-req') {
+    const reqId = t.dataset.reqId;
+    if (reqId && typeof confirmCoOwnerDeletion === 'function') {
+      confirmCoOwnerDeletion(reqId, false);
+    }
+    return;
+  }
+  if (d.action === 'open-chat-from-notif') {
+    const contactId = t.dataset.opencontact;
+    if (contactId) {
+      S.inboxContactId = contactId;
+      lsSet('cmd.notif_hidden', true);
+      lsSet('cmd.inbox_hidden', false);
+      if (typeof updateAskLayoutPanes === 'function') updateAskLayoutPanes();
+      if (typeof renderInboxChat === 'function') renderInboxChat();
+    }
     return;
   }
   if (d.action === 'manage-businesses') { openManageBusinesses(); return; }

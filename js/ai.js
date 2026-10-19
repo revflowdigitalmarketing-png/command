@@ -525,16 +525,14 @@ function renderChat() {
     if (last && S.chat.length) last.scrollIntoView({ block:'nearest' });
   }
   renderInboxChat();
+  renderNotificationsPane();
+  updateAskLayoutPanes();
 }
 
 function renderInboxChat() {
   const pane = $('#inbox-chat-pane');
   if (!pane) return;
-  const isHidden = lsGet('cmd.inbox_hidden', false);
-  const layout = $('#ask-layout');
-  if (layout) layout.classList.toggle('inbox-hidden', isHidden);
-  const reopen = $('#inbox-reopen-btn');
-  if (reopen) reopen.style.display = isHidden ? 'inline-flex' : 'none';
+  updateAskLayoutPanes();
 
   const myPid = S.profileId || 'rahul';
   const available = getAvailableChatContacts();
@@ -690,4 +688,214 @@ function renderInboxChat() {
   if (feed) {
     feed.scrollTop = feed.scrollHeight;
   }
+}
+
+function updateAskLayoutPanes() {
+  const isInboxHidden = lsGet('cmd.inbox_hidden', false);
+  const isNotifHidden = lsGet('cmd.notif_hidden', true);
+  const layout = $('#ask-layout');
+  if (layout) {
+    layout.classList.toggle('inbox-hidden', isInboxHidden);
+    layout.classList.toggle('notif-hidden', isNotifHidden);
+  }
+  const inboxBtn = $('#inbox-reopen-btn');
+  if (inboxBtn) inboxBtn.classList.toggle('active', !isInboxHidden);
+
+  const notifBtn = $('#notif-open-btn');
+  if (notifBtn) notifBtn.classList.toggle('active', !isNotifHidden);
+
+  updateAskTopbarBadges();
+}
+
+function updateAskTopbarBadges() {
+  const myPid = (S && S.profileId) || 'rahul';
+
+  // Inbox badge: count unread messages across all available contacts
+  const available = typeof getAvailableChatContacts === 'function' ? getAvailableChatContacts() : [];
+  let inboxUnread = 0;
+  available.forEach(p => {
+    const c = typeof getContactMessageCount === 'function' ? getContactMessageCount(myPid, p.id) : 0;
+    inboxUnread += c;
+  });
+  const inboxBadge = $('#ask-inbox-badge');
+  if (inboxBadge) {
+    if (inboxUnread > 0) {
+      inboxBadge.textContent = inboxUnread > 99 ? '99+' : inboxUnread;
+      inboxBadge.style.display = 'inline-grid';
+    } else {
+      inboxBadge.style.display = 'none';
+    }
+  }
+
+  // Notification badge: pending deletion requests for me
+  const allReqs = lsGet('cmd.pending_deletion_requests', []) || [];
+  const myDelReqs = allReqs.filter(r => r.status === 'pending' && Array.isArray(r.toPids) && r.toPids.includes(myPid) && !(Array.isArray(r.approvedPids) && r.approvedPids.includes(myPid)));
+
+  // Pending chat notifications
+  const pendingChat = lsGet('cmd.pending_chat_notifications', []) || [];
+  const myPendingChat = pendingChat.filter(m => m.to === myPid);
+
+  const notifCount = myDelReqs.length + (myPendingChat.length > 0 ? 1 : 0);
+  const notifBadge = $('#ask-notif-badge');
+  if (notifBadge) {
+    if (notifCount > 0) {
+      notifBadge.textContent = notifCount > 99 ? '99+' : notifCount;
+      notifBadge.style.display = 'inline-grid';
+    } else {
+      notifBadge.style.display = 'none';
+    }
+  }
+}
+
+function renderNotificationsPane() {
+  const pane = $('#ask-notif-pane');
+  if (!pane) return;
+
+  const myPid = (S && S.profileId) || 'rahul';
+  const allReqs = lsGet('cmd.pending_deletion_requests', []) || [];
+  // Requests where I am a target
+  const myDelReqs = allReqs.filter(r => r.status === 'pending' && Array.isArray(r.toPids) && r.toPids.includes(myPid));
+
+  // Recent history (last 5 entries)
+  const history = (S && S.history) || lsGet('cmd.history', []) || [];
+  const recentHistory = history.slice(0, 5);
+
+  // Due / upcoming items for myPid
+  const myItems = (S && S.items) || [];
+  const dueItems = myItems.filter(it => it && it.status !== 'done' && it.due).sort((a, b) => (a.due || '').localeCompare(b.due || '')).slice(0, 3);
+
+  // Unread messages from peers
+  const available = typeof getAvailableChatContacts === 'function' ? getAvailableChatContacts() : [];
+  const peerUpdates = available.map(p => {
+    const count = typeof getContactMessageCount === 'function' ? getContactMessageCount(myPid, p.id) : 0;
+    const timeStr = typeof getContactLastTime === 'function' ? getContactLastTime(myPid, p.id) : '';
+    const lastMsg = (typeof getChatMessages === 'function' ? getChatMessages(myPid, p.id) : []).slice(-1)[0];
+    return { contact: p, count, timeStr, lastMsg };
+  }).filter(x => x.count > 0 || x.lastMsg);
+
+  const totalNotifs = myDelReqs.length + peerUpdates.filter(x => x.count > 0).length;
+
+  pane.innerHTML = `
+    <div class="inbox-chat-card inbox-preview-card" style="background:#111112!important;height:100%!important;border:none!important;">
+      <!-- HEADER -->
+      <div class="inbox-card-head" style="background:#111112!important;border:none!important;">
+        <div class="inbox-head-bar inbox-preview-head-bar" style="background:#111112!important;border:none!important;">
+          <div class="inbox-head-left">
+            <span class="inbox-unread-label" style="color:#ffffff!important;">
+              <svg style="width:16px;height:16px;flex:none;color:#ff9f0a"><use href="#i-bell"/></svg>
+              Notifications
+            </span>
+            ${totalNotifs > 0 ? `<span class="badge" style="background:#ff453a;color:#fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:99px">${totalNotifs}</span>` : ''}
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <button type="button" class="inbox-back-btn" data-action="close-notif-pane" aria-label="Close notifications" title="Hide notifications">
+              <svg><use href="#i-back"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- NOTIFICATIONS FEED -->
+      <div class="inbox-preview-list-wrapper" style="background:#111112!important;padding:16px!important;overflow-y:auto;flex:1;">
+        ${myDelReqs.length > 0 ? `
+          <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#ff9f0a;margin:0 0 10px 4px">Action Required (${myDelReqs.length})</div>
+          ${myDelReqs.map(req => {
+            const hasApproved = Array.isArray(req.approvedPids) && req.approvedPids.includes(myPid);
+            const approvedCount = (req.approvedPids || []).length;
+            const totalNeeded = (req.toPids || []).length;
+            const approvedNames = (req.approvedPids || []).map(p => profileName(p)).join(', ');
+            return `
+              <div class="notif-item-card urgent" style="border-color:${hasApproved ? 'rgba(48,209,88,0.3)' : 'rgba(255,159,10,0.35)'}">
+                <div class="notif-card-header">
+                  <span class="notif-badge-tag ${hasApproved ? 'green' : 'amber'}">
+                    ${hasApproved ? '✓ Your Approval Recorded' : '⚠️ Approval Needed'}
+                  </span>
+                  <span class="notif-card-time">${req.createdAt ? new Date(req.createdAt).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' }) : ''}</span>
+                </div>
+                <div class="notif-card-title">${esc(req.fromName)} requested to delete ${esc(req.targetType)}</div>
+                <div class="notif-card-msg" style="font-size:14px;color:#ffffff;font-weight:600">"${esc(req.targetName)}"</div>
+                ${totalNeeded > 1 ? `
+                  <div style="font-size:12px;color:${approvedCount > 0 ? '#ff9f0a' : '#8e8e93'};margin-top:2px">
+                    ${approvedCount > 0 ? `Approved by ${esc(approvedNames)} (${approvedCount}/${totalNeeded} team approvals)` : `Requires approval from all ${totalNeeded} co-owners`}
+                  </div>
+                ` : ''}
+                ${!hasApproved ? `
+                  <div class="notif-card-actions">
+                    <button type="button" class="btn small danger" data-action="approve-del-req" data-req-id="${req.id}" style="padding:6px 16px;font-size:13px;font-weight:600">Yes, Delete</button>
+                    <button type="button" class="btn small" data-action="decline-del-req" data-req-id="${req.id}" style="padding:6px 14px;font-size:13px">No, Keep</button>
+                  </div>
+                ` : `
+                  <div style="font-size:12px;color:#30d158;font-weight:500;margin-top:4px">
+                    Waiting for other team members to approve before deletion completes.
+                  </div>
+                `}
+              </div>
+            `;
+          }).join('')}
+          <div style="height:12px"></div>
+        ` : ''}
+
+        <!-- TEAM MESSAGES -->
+        ${peerUpdates.length > 0 ? `
+          <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#8e8e93;margin:0 0 10px 4px">Team Messages</div>
+          ${peerUpdates.map(u => `
+            <div class="notif-item-card" data-action="open-chat-from-notif" data-opencontact="${u.contact.id}" style="cursor:pointer">
+              <div class="notif-card-header">
+                <span class="notif-badge-tag blue">${esc(u.contact.name)}</span>
+                <span class="notif-card-time">${esc(u.timeStr)}</span>
+              </div>
+              <div class="notif-card-msg" style="color:#ffffff;font-size:13.5px">
+                ${u.lastMsg ? (u.lastMsg.text ? esc(u.lastMsg.text) : (u.lastMsg.title ? `Promise: "${esc(u.lastMsg.title)}"` : 'Shared an update')) : 'No messages yet'}
+              </div>
+              <div class="notif-card-actions" style="justify-content:space-between">
+                <span style="font-size:11.5px;color:#0a84ff;font-weight:500">Tap to open chat in Inbox →</span>
+                ${u.count > 0 ? `<span class="badge" style="background:#ffffff;color:#111112;font-size:11px;font-weight:700;padding:1px 6px;border-radius:99px">${u.count} new</span>` : ''}
+              </div>
+            </div>
+          `).join('')}
+          <div style="height:12px"></div>
+        ` : ''}
+
+        <!-- UPCOMING & DUE -->
+        ${dueItems.length > 0 ? `
+          <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#8e8e93;margin:0 0 10px 4px">Upcoming & Due</div>
+          ${dueItems.map(it => `
+            <div class="notif-item-card">
+              <div class="notif-card-header">
+                <span class="notif-badge-tag green">${it.kind === 'payment' ? 'Payment' : 'Task'}</span>
+                <span class="notif-card-time">Due: ${esc(it.due || '')}</span>
+              </div>
+              <div class="notif-card-title">${esc(it.title)}</div>
+              ${it.amount ? `<div class="notif-card-msg">Amount: ₹${Number(it.amount).toLocaleString('en-IN')}${it.yourShare ? ` · Your share: ₹${Number(it.yourShare).toLocaleString('en-IN')}` : ''}</div>` : ''}
+            </div>
+          `).join('')}
+          <div style="height:12px"></div>
+        ` : ''}
+
+        <!-- RECENT ACTIVITY -->
+        ${recentHistory.length > 0 ? `
+          <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#8e8e93;margin:0 0 10px 4px">Recent Activity</div>
+          ${recentHistory.map(h => `
+            <div class="notif-item-card" style="padding:10px 14px">
+              <div class="notif-card-header">
+                <span style="font-size:12px;color:#a1a1a6;font-weight:500">${esc(h.action || 'Updated')} ${esc(h.category || '')}</span>
+                <span class="notif-card-time">${h.timestamp ? new Date(h.timestamp).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' }) : ''}</span>
+              </div>
+              <div style="font-size:13px;color:#ffffff;font-weight:500;margin-top:2px">${esc(h.title || '')}</div>
+            </div>
+          `).join('')}
+        ` : ''}
+
+        ${myDelReqs.length === 0 && peerUpdates.length === 0 && dueItems.length === 0 && recentHistory.length === 0 ? `
+          <div style="text-align:center;padding:56px 16px;color:#8e8e93">
+            <div style="width:48px;height:48px;border-radius:50%;background:#1c1c1e;display:grid;place-items:center;margin:0 auto 12px;color:#a1a1a6">
+              <svg style="width:22px;height:22px"><use href="#i-bell"/></svg>
+            </div>
+            <div style="font-weight:600;font-size:15px;color:#fff;margin-bottom:4px">No notifications</div>
+            <div style="font-size:13px;color:#636366">You are all caught up across all businesses.</div>
+          </div>
+        ` : ''}
+      </div>
+    </div>
+  `;
 }

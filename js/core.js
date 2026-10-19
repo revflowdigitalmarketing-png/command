@@ -56,6 +56,10 @@ function lsGet(k, f) { try { const v = localStorage.getItem(k); return v ? JSON.
 function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { } }
 
 /* ================= profiles + state + storage ================= */
+var S = null;
+var lastServerTimestamp = 0;
+var isSyncing = false;
+var pushDebounce = null;
 const PROFILES = [
   {
     id: 'rahul',
@@ -78,6 +82,10 @@ const PROFILES = [
 ];
 
 function defaultSettingsFor(profileId) {
+  const seed = (typeof window !== 'undefined' && window.__INITIAL_STORE__) || {};
+  if (seed[`settings_${profileId}`]) {
+    return JSON.parse(JSON.stringify(seed[`settings_${profileId}`]));
+  }
   if (profileId === 'adithya') {
     return {
       name: 'Adithya',
@@ -151,17 +159,19 @@ function defaultSettingsFor(profileId) {
 }
 
 function defaultItemsFor(profileId) {
+  const seed = (typeof window !== 'undefined' && window.__INITIAL_STORE__) || {};
+  if (Array.isArray(seed[`items_${profileId}`])) {
+    return JSON.parse(JSON.stringify(seed[`items_${profileId}`]));
+  }
   if (profileId === 'adithya') {
     return [
       { id: 'it-pay-ad-1', kind: 'payment', title: 'October Retainer · Nirvishikhara', client: 'zl4opg3r3gxe', amount: 22000, yourShare: 11000, status: 'open', due: '2026-10-05', biz: 'biz-revflow', notes: 'Monthly retainer', cal: null },
-      { id: 'it-pay-ad-2', kind: 'payment', title: 'October Retainer · Sree Nandi Tiles', client: '5gfdraar45fv', amount: 22000, yourShare: 11000, status: 'open', due: '2026-10-10', biz: 'biz-revflow', notes: 'Monthly retainer', cal: null },
       { id: 'it-pay-ad-3', kind: 'payment', title: 'One-Time Project Payment · Lalitha Clinics', client: 'va1i4bytbe4k', amount: 120000, yourShare: 18000, status: 'open', due: '2026-10-25', biz: 'biz-revflow', notes: 'One-time project payment', cal: null }
     ];
   }
   if (profileId === 'rahul') {
     return [
       { id: 'it-pay-1', kind: 'payment', title: 'October Retainer · Nirvishikhara', client: 'zl4opg3r3gxe', amount: 22000, yourShare: 11000, status: 'open', due: '2026-10-05', biz: 'biz-revflow', notes: 'Monthly retainer', cal: null },
-      { id: 'it-pay-2', kind: 'payment', title: 'October Retainer · Sree Nandi Tiles', client: '5gfdraar45fv', amount: 22000, yourShare: 11000, status: 'open', due: '2026-10-10', biz: 'biz-revflow', notes: 'Monthly retainer', cal: null },
       { id: 'it-pay-3', kind: 'payment', title: 'One-Time Project Payment · Lalitha Clinics', client: 'va1i4bytbe4k', amount: 120000, yourShare: 18000, status: 'open', due: '2026-10-25', biz: 'biz-revflow', notes: 'One-time project payment', cal: null },
       { id: 'it-6', kind: 'task', title: 'Fix audio desync when switching playback speed on mobile', client: '', person: '', due: '', time: '', priority: 'high', status: 'open', created: Date.now() - 30000000, biz: 'biz-larping', amount: 0, notes: '', cal: null },
       { id: 'it-7', kind: 'task', title: 'Fix dark mode toggle flickering white on first load', client: '', person: '', due: '', time: '', priority: 'med', status: 'open', created: Date.now() - 60000000, biz: 'biz-larping', amount: 0, notes: '', cal: null },
@@ -173,7 +183,6 @@ function defaultItemsFor(profileId) {
   if (profileId === 'sri-chandana') {
     return [
       { id: 'it-pay-sc-1', kind: 'payment', title: 'October Retainer · Nirvishikhara', client: 'zl4opg3r3gxe', amount: 22000, yourShare: 4000, status: 'open', due: '2026-10-05', biz: 'biz-revflow', notes: 'Monthly retainer', cal: null },
-      { id: 'it-pay-sc-2', kind: 'payment', title: 'October Retainer · Sree Nandi Tiles', client: '5gfdraar45fv', amount: 22000, yourShare: 4000, status: 'open', due: '2026-10-10', biz: 'biz-revflow', notes: 'Monthly retainer', cal: null },
       { id: 'it-pay-sc-3', kind: 'payment', title: 'October Retainer · Spring Consultancy', client: 'wneqziyr5huy', amount: 6000, yourShare: 1300, status: 'open', due: '2026-10-12', biz: 'biz-revflow', notes: 'Monthly retainer', cal: null },
       { id: 'it-pay-sc-4', kind: 'payment', title: 'One-Time Project Payment · Lalitha Clinics', client: 'va1i4bytbe4k', amount: 120000, yourShare: 18000, status: 'open', due: '2026-10-25', biz: 'biz-revflow', notes: 'One-time project payment', cal: null },
       { id: 'it-sc-f1', kind: 'task', isFocus: true, title: 'Record 3 video scripts and ad hooks for RevFlow', client: '', biz: 'biz-revflow', category: 'Video Editing', due: today(), priority: 'high', status: 'open', created: Date.now() - 3600000 },
@@ -189,18 +198,23 @@ const DEFAULT_ITEMS = () => defaultItemsFor((typeof window !== 'undefined' && wi
 function getMasterBusinesses() {
   let b = lsGet('cmd.businesses', null);
   if (!Array.isArray(b) || b.length === 0) {
-    const aggregated = [
-      ...((typeof window !== 'undefined' && window.S && window.S.settings && window.S.settings.businesses) || []),
-      ...((lsGet('cmd.settings_rahul', {}) || {}).businesses || []),
-      ...((lsGet('cmd.settings_sri-chandana', {}) || {}).businesses || []),
-      ...((lsGet('cmd.settings_adithya', {}) || {}).businesses || []),
-      ...(defaultSettingsFor('rahul').businesses || [])
-    ];
-    const map = new Map();
-    aggregated.forEach(biz => {
-      if (biz && biz.id && !map.has(biz.id)) map.set(biz.id, { ...biz });
-    });
-    b = Array.from(map.values());
+    const seed = (typeof window !== 'undefined' && window.__INITIAL_STORE__) || {};
+    if (Array.isArray(seed.businesses) && seed.businesses.length) {
+      b = JSON.parse(JSON.stringify(seed.businesses));
+    } else {
+      const aggregated = [
+        ...((typeof window !== 'undefined' && window.S && window.S.settings && window.S.settings.businesses) || []),
+        ...((lsGet('cmd.settings_rahul', {}) || {}).businesses || []),
+        ...((lsGet('cmd.settings_sri-chandana', {}) || {}).businesses || []),
+        ...((lsGet('cmd.settings_adithya', {}) || {}).businesses || []),
+        ...(defaultSettingsFor('rahul').businesses || [])
+      ];
+      const map = new Map();
+      aggregated.forEach(biz => {
+        if (biz && biz.id && !map.has(biz.id)) map.set(biz.id, { ...biz });
+      });
+      b = Array.from(map.values());
+    }
   }
   b.forEach(biz => {
     if (!biz.members || !Array.isArray(biz.members) || !biz.members.length) {
@@ -218,18 +232,23 @@ function getMasterBusinesses() {
 function getMasterClients() {
   let cList = lsGet('cmd.clients', null);
   if (!Array.isArray(cList) || cList.length === 0) {
-    const aggregated = [
-      ...((typeof window !== 'undefined' && window.S && window.S.settings && window.S.settings.clients) || []),
-      ...((lsGet('cmd.settings_rahul', {}) || {}).clients || []),
-      ...((lsGet('cmd.settings_sri-chandana', {}) || {}).clients || []),
-      ...((lsGet('cmd.settings_adithya', {}) || {}).clients || []),
-      ...(defaultSettingsFor('rahul').clients || [])
-    ];
-    const map = new Map();
-    aggregated.forEach(c => {
-      if (c && c.id && !map.has(c.id)) map.set(c.id, { ...c });
-    });
-    cList = Array.from(map.values());
+    const seed = (typeof window !== 'undefined' && window.__INITIAL_STORE__) || {};
+    if (Array.isArray(seed.clients) && seed.clients.length) {
+      cList = JSON.parse(JSON.stringify(seed.clients));
+    } else {
+      const aggregated = [
+        ...((typeof window !== 'undefined' && window.S && window.S.settings && window.S.settings.clients) || []),
+        ...((lsGet('cmd.settings_rahul', {}) || {}).clients || []),
+        ...((lsGet('cmd.settings_sri-chandana', {}) || {}).clients || []),
+        ...((lsGet('cmd.settings_adithya', {}) || {}).clients || []),
+        ...(defaultSettingsFor('rahul').clients || [])
+      ];
+      const map = new Map();
+      aggregated.forEach(c => {
+        if (c && c.id && !map.has(c.id)) map.set(c.id, { ...c });
+      });
+      cList = Array.from(map.values());
+    }
   }
   cList = cList.filter(c => c && c.id && c.id !== 'cl-1' && c.id !== 'cl-2');
   lsSet('cmd.clients', cList);
@@ -413,8 +432,11 @@ function getProfileItems(pid) {
   const def = defaultItemsFor(pid);
   const saved = lsGet(`cmd.items_${pid}`, null) || (pid === 'rahul' ? lsGet('cmd.items', null) : null);
   const raw = Array.isArray(saved) ? saved : def;
+  const delItems = new Set(lsGet('cmd.deleted_items', []));
+
   let filtered = raw.filter(i =>
     i && i.id &&
+    !delItems.has(i.id) &&
     !['it-1', 'it-2', 'it-3', 'it-4', 'it-5', 'it-f2', 'it-11'].includes(i.id) &&
     i.client !== 'cl-1' &&
     i.client !== 'cl-2' &&
@@ -429,7 +451,7 @@ function getProfileItems(pid) {
   });
 
   def.forEach(d => {
-    if (d.kind === 'payment' && !filtered.some(f => f.id === d.id)) {
+    if (d.kind === 'payment' && !delItems.has(d.id) && !filtered.some(f => f.id === d.id)) {
       filtered.push(d);
     }
   });
@@ -542,6 +564,28 @@ function detectInitialProfile() {
   } catch { }
   return lsGet('cmd.active_profile', 'rahul');
 }
+
+function bootstrapStoreData() {
+  const seed = (typeof window !== 'undefined' && window.__INITIAL_STORE__) || {};
+  if (!seed || typeof seed !== 'object' || !seed.lastUpdated) return;
+
+  const currentSeedVer = lsGet('cmd.seed_version', 0);
+  const curHist = lsGet('cmd.history', null);
+  const curClients = lsGet('cmd.clients', null);
+  const curBiz = lsGet('cmd.businesses', null);
+
+  const needsBootstrap = !currentSeedVer ||
+    currentSeedVer < (seed.lastUpdated || 0) ||
+    !Array.isArray(curHist) || curHist.length === 0 ||
+    !Array.isArray(curClients) || curClients.length < 3 ||
+    !Array.isArray(curBiz) || curBiz.length < 3;
+
+  if (needsBootstrap) {
+    applyServerData(seed);
+    lsSet('cmd.seed_version', seed.lastUpdated || Date.now());
+  }
+}
+bootstrapStoreData();
 
 let isInitialBoot = true;
 const activeProfileId = detectInitialProfile();
@@ -679,6 +723,12 @@ function switchProfile(pid, origin = null) {
     if (typeof checkPendingDeletionRequests === 'function') {
       checkPendingDeletionRequests(pid);
     }
+    if (typeof updateAskTopbarBadges === 'function') {
+      updateAskTopbarBadges();
+    }
+    if (typeof renderNotificationsPane === 'function') {
+      renderNotificationsPane();
+    }
   }, 400);
 }
 
@@ -695,23 +745,30 @@ function resetToDefaults() {
   toast(`Reset to ${S.settings.name}'s default businesses & clients.`);
 }
 
-const S = window.S = {
+S = window.S = {
   profileId: activeProfileId,
   settings: finalSettings,
   items: finalItems,
   events: [], cal: { state: 'loading', msg: '' },
   view: 'home', client: null, ctab: 'open', day: today(),
   review: null, plan: lsGet('cmd.plan', null), chat: [], mode: 'loading',
-  history: lsGet('cmd.history', [])
+  history: getHistory()
 };
-
-let lastServerTimestamp = 0;
-let isSyncing = false;
-let pushDebounce = null;
 
 /* ================= Change History ================= */
 function getHistory() {
-  return lsGet('cmd.history', []) || [];
+  let list = lsGet('cmd.history', null);
+  if (!Array.isArray(list) || list.length === 0) {
+    const seed = (typeof window !== 'undefined' && window.__INITIAL_STORE__) || {};
+    if (Array.isArray(seed.history) && seed.history.length > 0) {
+      list = JSON.parse(JSON.stringify(seed.history));
+      lsSet('cmd.history', list);
+      if (typeof S !== 'undefined' && S) S.history = list;
+    } else {
+      list = [];
+    }
+  }
+  return list;
 }
 
 function recordHistory({ action, category, title, details, profileId }) {
@@ -867,6 +924,30 @@ function applyServerData(data) {
     }
   }
 
+  // 4. Deleted item, business, and client IDs synced from server
+  if (Array.isArray(data.deletedItemIds)) {
+    const cur = lsGet('cmd.deleted_items', []);
+    const merged = Array.from(new Set([...cur, ...data.deletedItemIds]));
+    lsSet('cmd.deleted_items', merged);
+  }
+  if (Array.isArray(data.deletedBizIds)) {
+    const cur = lsGet('cmd.deleted_biz', []);
+    const merged = Array.from(new Set([...cur, ...data.deletedBizIds]));
+    lsSet('cmd.deleted_biz', merged);
+  }
+  if (Array.isArray(data.deletedClientIds)) {
+    const cur = lsGet('cmd.deleted_clients', []);
+    const merged = Array.from(new Set([...cur, ...data.deletedClientIds]));
+    lsSet('cmd.deleted_clients', merged);
+  }
+
+  if (typeof updateAskTopbarBadges === 'function') {
+    updateAskTopbarBadges();
+  }
+  if (typeof renderNotificationsPane === 'function') {
+    renderNotificationsPane();
+  }
+
   if (data.lastUpdated) {
     lastServerTimestamp = data.lastUpdated;
   }
@@ -878,6 +959,8 @@ async function pullFromServer() {
   try {
     const res = await fetch('/api/data', { cache: 'no-store' });
     if (!res.ok) return;
+    const cType = res.headers.get('content-type') || '';
+    if (!cType.includes('application/json')) return;
     const data = await res.json();
     if (!data || !data.lastUpdated || data.lastUpdated <= lastServerTimestamp) return;
     const changed = applyServerData(data);
@@ -929,10 +1012,9 @@ function pushAllToServer() {
         if (res.ok) {
           const json = await res.json();
           lastServerTimestamp = json.lastUpdated || payload.lastUpdated;
-          lsSet('cmd.deleted_items', []);
-          lsSet('cmd.deleted_biz', []);
-          lsSet('cmd.deleted_clients', []);
           setSync('cloud');
+        } else {
+          setSync('local');
         }
       } catch (e) {
         setSync('local');
@@ -945,6 +1027,8 @@ function pushAllToServer() {
 }
 
 async function initStore() {
+  bootstrapStoreData();
+
   let auth = getAuthUser();
   if (!auth) {
     const initialPid = S.profileId || detectInitialProfile();
@@ -960,26 +1044,49 @@ async function initStore() {
   }
   hideAuthGate();
 
+  let fetchedServerData = false;
+
+  // 1. Try local dev/preview API first (/api/data)
   try {
     const res = await fetch('/api/data', { cache: 'no-store' });
-    if (res.ok) {
+    const cType = res.headers.get('content-type') || '';
+    if (res.ok && cType.includes('application/json')) {
       const data = await res.json();
       if (data && typeof data === 'object' && (data.lastUpdated || Object.keys(data).length > 1)) {
         applyServerData(data);
         isInitialBoot = false;
         S.mode = 'cloud';
+        fetchedServerData = true;
       } else {
         isInitialBoot = false;
         await pushAllToServer();
         S.mode = 'cloud';
+        fetchedServerData = true;
       }
-    } else {
-      isInitialBoot = false;
-      S.mode = 'local';
     }
-  } catch {
+  } catch (e) { }
+
+  // 2. If /api/data not available, try static JSON file (works on GitHub Pages, Vercel, Netlify)
+  if (!fetchedServerData) {
+    try {
+      const staticRes = await fetch('./data/dashboard-store.json', { cache: 'no-cache' });
+      const cType = staticRes.headers.get('content-type') || '';
+      if (staticRes.ok && (cType.includes('application/json') || staticRes.url.includes('.json'))) {
+        const staticData = await staticRes.json();
+        if (staticData && typeof staticData === 'object' && Object.keys(staticData).length > 1) {
+          applyServerData(staticData);
+          isInitialBoot = false;
+          S.mode = 'cloud';
+          fetchedServerData = true;
+        }
+      }
+    } catch (e) { }
+  }
+
+  // 3. Fallback to seed snapshot
+  if (!fetchedServerData) {
     isInitialBoot = false;
-    S.mode = 'local';
+    S.mode = 'cloud';
   }
 
   if (S.profileId !== auth.profileId) {
@@ -1301,7 +1408,7 @@ function alertCoOwnerDeletion(targetName, coOwnerPids, type = 'business/client',
 function checkPendingDeletionRequests(targetPid) {
   const curPid = targetPid || (S && S.profileId) || 'rahul';
   const allReqs = lsGet('cmd.pending_deletion_requests', []) || [];
-  const forMe = allReqs.filter(r => r.status === 'pending' && Array.isArray(r.toPids) && r.toPids.includes(curPid));
+  const forMe = allReqs.filter(r => r.status === 'pending' && Array.isArray(r.toPids) && r.toPids.includes(curPid) && !(Array.isArray(r.approvedPids) && r.approvedPids.includes(curPid)));
   if (!forMe.length) return;
 
   const req = forMe[0];
@@ -1380,19 +1487,40 @@ function promptDeletionApprovalSheet(req) {
   });
 }
 
-function confirmCoOwnerDeletion(reqId, approved) {
+function confirmCoOwnerDeletion(reqId, approved, approverPid) {
+  const curPid = approverPid || (S && S.profileId) || 'rahul';
   const allReqs = lsGet('cmd.pending_deletion_requests', []) || [];
   const req = allReqs.find(r => r.id === reqId);
   if (!req) return;
-
-  const remainingReqs = allReqs.filter(r => r.id !== reqId);
-  lsSet('cmd.pending_deletion_requests', remainingReqs);
 
   if (typeof dismissDynamicNotification === 'function') {
     dismissDynamicNotification();
   }
 
-  if (approved) {
+  if (!approved) {
+    const remainingReqs = allReqs.filter(r => r.id !== reqId);
+    lsSet('cmd.pending_deletion_requests', remainingReqs);
+    toast(`Deletion request declined. "${req.targetName}" was kept.`);
+    pushAllToServer();
+    if (typeof updateAskTopbarBadges === 'function') updateAskTopbarBadges();
+    if (typeof renderNotificationsPane === 'function') renderNotificationsPane();
+    return;
+  }
+
+  // Record co-owner approval
+  req.approvedPids = req.approvedPids || [];
+  if (!req.approvedPids.includes(curPid)) {
+    req.approvedPids.push(curPid);
+  }
+
+  const toPids = Array.isArray(req.toPids) ? req.toPids : [];
+  // All required co-owners approved, or single co-owner approved
+  const allApproved = toPids.length === 0 || toPids.every(p => req.approvedPids.includes(p));
+
+  if (allApproved) {
+    const remainingReqs = allReqs.filter(r => r.id !== reqId);
+    lsSet('cmd.pending_deletion_requests', remainingReqs);
+
     if (req.targetType === 'business') {
       executeDeleteBusiness(req.targetId, req.targetName);
     } else if (req.targetType === 'client') {
@@ -1400,13 +1528,18 @@ function confirmCoOwnerDeletion(reqId, approved) {
     } else {
       executeDeleteTask(req.targetId, req.targetName, req.targetType);
     }
-    toast(`"${req.targetName}" was deleted.`);
+    toast(`"${req.targetName}" was approved and deleted.`);
     if (typeof playNotificationChime === 'function') playNotificationChime();
   } else {
-    toast(`Deletion request declined. "${req.targetName}" was kept.`);
+    const remainingToPids = toPids.filter(p => !req.approvedPids.includes(p));
+    const neededNames = remainingToPids.map(p => profileName(p)).join(' & ');
+    toast(`Approved by ${profileName(curPid)}. Waiting for ${neededNames}.`);
+    lsSet('cmd.pending_deletion_requests', allReqs);
   }
 
   pushAllToServer();
+  if (typeof updateAskTopbarBadges === 'function') updateAskTopbarBadges();
+  if (typeof renderNotificationsPane === 'function') renderNotificationsPane();
 
   setTimeout(() => {
     checkPendingDeletionRequests();
@@ -1446,7 +1579,10 @@ function executeDeleteTask(id, title, kind) {
     });
   }
 
+  const delItems = lsGet('cmd.deleted_items', []);
+
   if (resolvedId) {
+    if (!delItems.includes(resolvedId)) delItems.push(resolvedId);
     S.items = S.items.filter(x => x.id !== resolvedId);
     PROFILES.forEach(p => {
       const pItems = lsGet(`cmd.items_${p.id}`, []);
@@ -1455,21 +1591,25 @@ function executeDeleteTask(id, title, kind) {
       }
     });
     lsSet('cmd.items', S.items);
+  }
 
-    const delItems = lsGet('cmd.deleted_items', []);
-    if (!delItems.includes(resolvedId)) delItems.push(resolvedId);
-    lsSet('cmd.deleted_items', delItems);
-  } else if (title) {
-    S.items = S.items.filter(x => !(x.title && x.title.toLowerCase() === title.toLowerCase()));
+  if (title) {
+    const lowerTitle = title.toLowerCase();
     PROFILES.forEach(p => {
       const pItems = lsGet(`cmd.items_${p.id}`, []);
       if (Array.isArray(pItems)) {
-        lsSet(`cmd.items_${p.id}`, pItems.filter(x => !(x.title && x.title.toLowerCase() === title.toLowerCase())));
+        const matches = pItems.filter(x => x && x.title && x.title.toLowerCase() === lowerTitle);
+        matches.forEach(m => {
+          if (m && m.id && !delItems.includes(m.id)) delItems.push(m.id);
+        });
+        lsSet(`cmd.items_${p.id}`, pItems.filter(x => !(x && x.title && x.title.toLowerCase() === lowerTitle)));
       }
     });
+    S.items = S.items.filter(x => !(x && x.title && x.title.toLowerCase() === lowerTitle));
     lsSet('cmd.items', S.items);
   }
 
+  lsSet('cmd.deleted_items', delItems);
   render();
   pushAllToServer();
 }
