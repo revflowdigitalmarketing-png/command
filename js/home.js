@@ -3,14 +3,17 @@
 let raf = 0;
 function render() { cancelAnimationFrame(raf); raf = requestAnimationFrame(renderNow); }
 function renderNow() {
-  $$('[data-go]').forEach(b => { if (b.classList.contains('nav-btn') || b.classList.contains('tab')) b.setAttribute('aria-current', b.dataset.go === S.view ? 'page' : 'false'); });
+  $$('[data-go]').forEach(b => {
+    if (b.classList.contains('nav-btn') || b.classList.contains('tab')) {
+      b.setAttribute('aria-current', b.dataset.go === S.view ? 'page' : 'false');
+    }
+  });
   ['home','clients','word','money','ask','crushers'].forEach(v => {
     const el = $('#v-' + v);
     if (el) el.hidden = S.view !== v;
   });
-  const lateAll = openItems().filter(isLate).length;
   const latePromises = openItems().filter(i => i.kind === 'promise' && isLate(i)).length;
-  setCount('home', lateAll); setCount('word', latePromises);
+  setCount('home', 0); setCount('word', latePromises);
   placeNavInd();
   $('#word-pip').hidden = !latePromises;
   if (S.view === 'home') renderHome();
@@ -33,36 +36,47 @@ function taskRow(it, opts = {}) {
   const c = clientById(it.client);
   const d = dueLabel(it.due);
   const bits = [];
-  if (opts.showClient !== false && c) bits.push(`<span><span class="chip"><span class="sw" style="background:${clientColor(c)}"></span>${esc(c.short || c.name)}</span></span>`);
-  if (it.kind !== 'task') {
-    if (it.kind === 'promise') {
-      const isIncoming = it.fromProfileId && it.fromProfileId !== (S.profileId || 'rahul');
-      if (isIncoming) {
-        bits.push(`<span><span class="chip" style="font-weight:600;background:var(--surface-3);color:var(--ink);padding:1px 6px">From ${esc(profileName(it.fromProfileId))}</span></span>`);
-      } else {
-        bits.push(`<span>Promise${it.person ? ' to ' + esc(it.person) : ''}</span>`);
-      }
-    } else {
-      bits.push(`<span>${KIND_LABEL[it.kind] || ''}${it.person ? ' · ' + esc(it.person) : ''}</span>`);
-    }
-  }
-  if (it.kind === 'payment' && it.status === 'done' && it.doneAt) bits.push(`<span>Received ${new Date(it.doneAt).toLocaleDateString('en-IN',{day:'numeric', month:'short', year:'numeric'})}</span>`);
-  else if (d.text) bits.push(`<span class="${d.cls}"><svg><use href="#i-clock"/></svg> ${d.text}${it.time ? ', ' + fmtTime(it.time) : ''}</span>`);
   if (it.kind === 'payment') {
-    if (it.totalRetainer || it.yourShare) {
-      const pInfo = [];
-      if (it.totalRetainer) pInfo.push(`Total: ${inr(it.totalRetainer)}`);
-      if (it.yourShare) pInfo.push(`Share: ${inr(it.yourShare)}`);
-      bits.push(`<span class="mono faint" style="font-size:12px">${pInfo.join(' · ')}</span>`);
+    const myShare = paymentShare(it);
+    bits.push(`<span class="mono" style="font-weight:600">${inr(myShare)}</span>`);
+    if (c) {
+      bits.push(`<span><span class="chip"><span class="sw" style="background:${clientColor(c)}"></span>${esc(c.short || c.name)}</span></span>`);
+    } else if (it.person) {
+      bits.push(`<span><span class="chip" style="font-weight:500;background:var(--surface-3);color:var(--ink);padding:1px 6px">${esc(it.person)}</span></span>`);
     }
-    if (it.amount) bits.push(`<span class="mono" style="font-weight:600">${inr(it.amount)}</span>`);
+    if (it.status === 'done' && it.doneAt) {
+      bits.push(`<span class="faint">Received ${new Date(it.doneAt).toLocaleDateString('en-IN',{day:'numeric', month:'short'})}</span>`);
+    } else if (validDate(it.due)) {
+      const dd = dayDiff(it.due);
+      if (dd < 0) {
+        bits.push(`<span class="od"><svg><use href="#i-clock"/></svg> ${Math.abs(dd) === 1 ? '1 day late' : Math.abs(dd) + ' days late'}</span>`);
+      } else if (d.text) {
+        bits.push(`<span class="${d.cls || 'faint'}"><svg><use href="#i-clock"/></svg> ${d.text}</span>`);
+      }
+    }
+  } else {
+    if (opts.showClient !== false && c) bits.push(`<span><span class="chip"><span class="sw" style="background:${clientColor(c)}"></span>${esc(c.short || c.name)}</span></span>`);
+    if (it.kind !== 'task') {
+      if (it.kind === 'promise') {
+        const isIncoming = it.fromProfileId && it.fromProfileId !== (S.profileId || 'rahul');
+        if (isIncoming) {
+          bits.push(`<span><span class="chip" style="font-weight:600;background:var(--surface-3);color:var(--ink);padding:1px 6px">From ${esc(profileName(it.fromProfileId))}</span></span>`);
+        } else {
+          bits.push(`<span>Promise${it.person ? ' to ' + esc(it.person) : ''}</span>`);
+        }
+      } else {
+        bits.push(`<span>${KIND_LABEL[it.kind] || ''}${it.person ? ' · ' + esc(it.person) : ''}</span>`);
+      }
+    }
+    if (it.status === 'done' && it.doneAt) bits.push(`<span>Done</span>`);
+    else if (d.text && d.cls !== 'od' && !d.text.includes('late')) bits.push(`<span class="${d.cls}"><svg><use href="#i-clock"/></svg> ${d.text}${it.time ? ', ' + fmtTime(it.time) : ''}</span>`);
+    if (it.cal) bits.push(`<span title="On Google Calendar"><svg><use href="#i-cal"/></svg></span>`);
   }
-  if (it.cal) bits.push(`<span title="On Google Calendar"><svg><use href="#i-cal"/></svg></span>`);
   return `<div class="task ${it.status === 'done' ? 'done' : ''}" data-id="${it.id}">
     <button class="check" data-toggle="${it.id}" aria-label="${it.status === 'done' ? 'Mark not done' : 'Mark done'}"><svg><use href="#i-check"/></svg></button>
     <span class="stripe" style="background:${c ? clientColor(c) : PRIO_COLOR[it.priority]}"></span>
     <button class="body" data-edit="${it.id}">
-      <span class="ttl">${esc(it.title)}</span>
+      <span class="ttl" style="font-weight:400">${esc(it.title)}</span>
       ${bits.length ? `<span class="sub">${bits.join('')}</span>` : ''}
     </button>
     <button class="more" data-edit="${it.id}" aria-label="Edit"><svg><use href="#i-dots"/></svg></button>
@@ -160,7 +174,7 @@ function renderHome() {
 
   const open = openItems();
   const t = today();
-  const dueToday = open.filter(i => i.due === t);
+  const dueToday = open.filter(i => i.due === t && (i.kind === 'task' || i.isFocus) && i.kind !== 'reel');
   const todayEvents = S.events.filter(e => e.day === t);
   const chips = [];
   if (dueToday.length) chips.push(`<span class="chip warn">${dueToday.length} today</span>`);
@@ -168,21 +182,33 @@ function renderHome() {
   $('#status-line').innerHTML = chips.join('');
 
   // clients rail
+  // clients rail
   const cl = clients();
   $('#client-rail').innerHTML = businesses().length ? businesses().map(mainFolder).join('') :
     `<div class="empty">No businesses yet. <button class="link" data-action="manage-businesses" style="color:var(--ink)">Manage businesses</button></div>`;
 
-  // focus: overdue + today + high priority soon
-  const focus = sortItems(open.filter(i => i.kind !== 'note' && i.kind !== 'glitch' && (isLate(i) || i.due === t || (i.priority === 'high' && (!i.due || dayDiff(i.due) <= 2)))));
+  // focus: only tasks (overdue + today + high priority soon) - no reels or scheduled content
+  const focus = sortItems(open.filter(i => (i.kind === 'task' || i.isFocus) && i.kind !== 'reel' && i.kind !== 'note' && i.kind !== 'payment' && (isLate(i) || i.due === t || (i.priority === 'high' && (!i.due || dayDiff(i.due) <= 2)))));
   // late promises first
   focus.sort((a, b) => (isLate(b) && b.kind === 'promise') - (isLate(a) && a.kind === 'promise'));
-  $('#focus').innerHTML = focus.length ? focus.slice(0, 12).map(i => taskRow(i)).join('') :
-    `<div class="empty">No items scheduled today.</div>`;
+  renderFocusSection(focus);
+
+  // Week strip at very top of Home
+  renderWeekStrip();
+
+  // Streak card on Home
+  renderStreak();
 
   // This Week's Crushers mini list on Home
   if (typeof renderCrushersMini === 'function') renderCrushersMini();
 
-  renderStreak();
+  // My Word mini list on Home
+  const wm = $('#word-mini');
+  if (wm) {
+    const pr = sortItems(open.filter(i => i.kind === 'promise')).slice(0, 3);
+    wm.innerHTML = pr.length ? pr.map(i => taskRow(i)).join('') : `<div class="empty">No open promises. Add one when you give someone your word.</div>`;
+  }
+
   renderDay();
 }
 function mainFolder(b) {
@@ -203,7 +229,10 @@ function clientCard(c) {
   const late = open.filter(isLate).length;
   const next = sortItems(open.filter(i => validDate(i.due)))[0];
   const papers = open.length ? `<span class="f-paper p1"></span>${open.length > 1 ? '<span class="f-paper p2"></span>' : ''}` : '';
-  const sub = `${open.length} open${late ? ` · ${late} late` : next ? ' · ' + dueLabel(next.due).text : ''}${c.retainer ? ` · ${inr(c.retainer)}` : ''}`;
+  const priceLabel = c.retainer
+    ? `${inr(c.retainer)} / mo`
+    : (c.oneTime ? inr(c.oneTime) : '');
+  const sub = `${open.length} open${late ? ` · ${late} late` : next ? ' · ' + dueLabel(next.due).text : ''}${priceLabel ? ` · ${priceLabel}` : ''}`;
   const frontStyle = c.cover ? `background:linear-gradient(rgba(0,0,0,0.3),rgba(0,0,0,0.7)),url('${esc(c.cover)}') center/cover;color:#fff;` : '';
   return `<button class="folder-card" data-client="${c.id}">
     <span class="folder" aria-hidden="true"><span class="f-back"></span>${papers}<span class="f-front" style="${frontStyle}"><span class="f-badges"><span class="f-chip">★ ${starsOf(c).toFixed(1)}</span>${late ? `<span class="f-chip late">${late} late</span>` : ''}</span></span></span>
@@ -228,7 +257,7 @@ function renderDay(scope) {
   if (!days.includes(S[ids.key])) S[ids.key] = t;
   const sel = S[ids.key];
   const evAll = c ? S.events.filter(e => clientMatchesEvent(c, e)) : S.events;
-  const itAll = openItems().filter(i => i.kind !== 'note' && (!c || i.client === c.id));
+  const itAll = openItems().filter(i => i.kind !== 'note' && i.kind !== 'reel' && i.kind !== 'glitch' && (!c || i.client === c.id));
   $(ids.strip).innerHTML = days.map(d => {
     const dt = parseYmd(d);
     const has = evAll.some(e => e.day === d) || itAll.some(i => i.due === d);
@@ -262,7 +291,7 @@ const endOfDay = d => { const x = parseYmd(d); x.setHours(23, 59, 59, 999); retu
 function dayStatus(d) {
   // ok: nothing due up to d was left open at the end of d, and something got done or was due that day
   const end = endOfDay(d), start = parseYmd(d).getTime();
-  const tracked = S.items.filter(i => i.kind !== 'note' && validDate(i.due) && (i.created || 0) <= end);
+  const tracked = S.items.filter(i => i.kind !== 'note' && i.kind !== 'reel' && validDate(i.due) && (i.created || 0) <= end);
   const leftOpen = tracked.filter(i => i.due <= d && !(i.status === 'done' && i.doneAt && i.doneAt <= end));
   const doneThatDay = S.items.filter(i => i.status === 'done' && i.doneAt >= start && i.doneAt <= end).length;
   const dueThatDay = tracked.filter(i => i.due === d);
@@ -274,28 +303,26 @@ function ringSvg(frac) {
   return `<svg class="ring" viewBox="0 0 30 30" aria-hidden="true"><circle cx="15" cy="15" r="${r}" fill="none" stroke="var(--surface-3)" stroke-width="3"/><circle cx="15" cy="15" r="${r}" fill="none" stroke="var(--ink)" stroke-width="3" stroke-linecap="round" stroke-dasharray="${(c*f).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 15 15)"/></svg>`;
 }
 function renderStreak() {
+  const el = $('#streak');
+  if (!el) return;
   const t = today();
-  const pid = (S && S.profileId) || 'rahul';
-  const isSri = pid === 'sri-chandana';
-  const started = isSri ? !!lsGet('cmd.sri_streak_started', false) : !!S.settings.streakStarted;
   let streak = 0;
-  if (started) {
-    const todaySt = dayStatus(t);
-    let d = todaySt.ok ? t : addDays(t, -1);
-    for (let k = 0; k < 400; k++) {
-      const st = dayStatus(d);
-      if (st.ok) streak++;
-      else if (st.active || st.leftOpen) break;
-      const first = S.items.reduce((m, i) => Math.min(m, i.created || Infinity), Infinity);
-      if (!isFinite(first) || parseYmd(d).getTime() < first) break;
-      d = addDays(d, -1);
-    }
+  const todaySt = dayStatus(t);
+  let d = todaySt.ok ? t : addDays(t, -1);
+  for (let k = 0; k < 400; k++) {
+    const st = dayStatus(d);
+    if (st.ok) streak++;
+    else if (st.active || st.leftOpen) break;
+    const first = (S.items || []).reduce((m, i) => Math.min(m, i.created || Infinity), Infinity);
+    if (!isFinite(first) || parseYmd(d).getTime() < first) break;
+    d = addDays(d, -1);
   }
-  const now = parseYmd(t); const dow = (now.getDay() + 6) % 7; // Monday = 0
+  const now = parseYmd(t);
+  const dow = (now.getDay() + 6) % 7; // Monday = 0
   const monday = addDays(t, -dow);
   const week = Array.from({ length: 7 }, (_, i) => addDays(monday, i)).map(day => {
     const lbl = parseYmd(day).toLocaleDateString('en-IN', { weekday:'short' });
-    if (!started || day > t) return `<div class="wd"><i></i>${lbl}</div>`;
+    if (day > t) return `<div class="wd"><i></i>${lbl}</div>`;
     const st = dayStatus(day);
     if (day === t && !st.ok) {
       const frac = st.dueTotal ? st.dueDone / st.dueTotal : 0;
@@ -303,20 +330,159 @@ function renderStreak() {
     }
     return st.ok ? `<div class="wd ok ${day === t ? 'today' : ''}"><i><svg><use href="#i-check"/></svg></i>${lbl}</div>` : `<div class="wd miss"><i></i>${lbl}</div>`;
   }).join('');
-  const dueToday = S.items.filter(i => i.kind !== 'note' && (i.due === t || (i.status !== 'done' && validDate(i.due) && i.due < t)));
+  const dueToday = (S.items || []).filter(i => i.kind !== 'note' && (i.due === t || (i.status !== 'done' && validDate(i.due) && i.due < t)));
   const doneN = dueToday.filter(i => i.status === 'done').length;
   const pct = dueToday.length ? Math.round(doneN / dueToday.length * 100) : 0;
-  $('#streak').innerHTML = `
+  el.innerHTML = `
     <div class="streak-top"><div><small>STREAK</small><b>${streak}<span>${streak === 1 ? 'DAY' : 'DAYS'}</span></b></div>
-      <div style="display:flex;align-items:center;gap:10px">
-        ${!started ? `<button type="button" class="btn small primary" data-action="start-streak" style="padding:4px 12px;font-size:12px;height:28px">Start</button>` : ''}
-        <div class="faint" style="font-size:12px;text-align:right;max-width:18ch">A tick means all tasks completed that day</div>
-      </div>
-    </div>
+      <div class="faint" style="font-size:12px;text-align:right;max-width:18ch">A tick means nothing was left overdue that day</div></div>
     <div class="week">${week}</div>
     <div class="streak-bar"><small>TODAY</small>
-      <div class="row"><b>${doneN}<span> / ${dueToday.length} done</span></b><span class="faint" style="font-size:12.5px">${dueToday.length ? pct + '%' : 'All caught up'}</span></div>
+      <div class="row"><b>${doneN}<span> / ${dueToday.length} done</span></b><span class="faint" style="font-size:12.5px">${dueToday.length ? pct + '%' : 'Nothing due'}</span></div>
       <div class="bar"><i style="width:${pct}%"></i></div></div>`;
+}
+
+/* ---- focus tasks: 2 balanced columns grouped by business ---- */
+function renderFocusSection(focus) {
+  const focusEl = $('#focus');
+  if (!focusEl) return;
+  if (!focus.length) {
+    focusEl.innerHTML = `<div class="empty">No items scheduled today.</div>`;
+    return;
+  }
+  // Group tasks by business
+  const groupMap = new Map();
+  for (const it of focus) {
+    const bId = typeof taskBiz === 'function' ? taskBiz(it) : (it.biz || (it.client && (clientById(it.client) || {}).biz) || '');
+    const b = bId ? bizById(bId) : null;
+    const key = b ? b.id : '__general__';
+    const name = b ? b.name : 'General';
+    if (!groupMap.has(key)) {
+      groupMap.set(key, { key, name, items: [] });
+    }
+    groupMap.get(key).items.push(it);
+  }
+  const groups = Array.from(groupMap.values());
+
+  // Balance whole groups across 2 columns by height
+  let col1Groups = [];
+  let col2Groups = [];
+  if (groups.length <= 1) {
+    col1Groups = groups;
+    col2Groups = [];
+  } else {
+    let bestDiff = Infinity;
+    const total = 1 << groups.length;
+    for (let mask = 1; mask < total - 1; mask++) {
+      let h1 = 0, h2 = 0;
+      const c1 = [], c2 = [];
+      for (let i = 0; i < groups.length; i++) {
+        const g = groups[i];
+        const weight = 1.2 + g.items.length;
+        if ((mask & (1 << i)) !== 0) {
+          c1.push(g);
+          h1 += weight;
+        } else {
+          c2.push(g);
+          h2 += weight;
+        }
+      }
+      const diff = Math.abs(h1 - h2);
+      if (diff < bestDiff) {
+        bestDiff = diff;
+        col1Groups = c1;
+        col2Groups = c2;
+        if (diff === 0) break;
+      }
+    }
+  }
+
+  const renderGroup = g => `
+    <div class="focus-group">
+      <div class="focus-group-subhead">${esc(g.name.toUpperCase())}</div>
+      <div class="focus-group-tasks">
+        ${g.items.map(it => taskRow(it)).join('')}
+      </div>
+    </div>
+  `;
+
+  const col1Html = col1Groups.map(renderGroup).join('');
+  const col2Html = col2Groups.map(renderGroup).join('');
+
+  focusEl.innerHTML = `
+    <div class="focus-grid">
+      <div class="focus-col">${col1Html}</div>
+      ${col2Html ? `<div class="focus-col">${col2Html}</div>` : ''}
+    </div>
+  `;
+}
+
+/* ---- week strip (top of Home) ---- */
+function renderWeekStrip() {
+  const container = $('#home-week-strip');
+  if (!container) return;
+  const t = today();
+  const dtToday = parseYmd(t);
+  const dow = (dtToday.getDay() + 6) % 7; // Monday = 0, Sunday = 6
+  const monday = addDays(t, -dow);
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
+  const oneLetters = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+
+  if (!S.selectedWeekDay || !weekDays.includes(S.selectedWeekDay)) {
+    S.selectedWeekDay = t;
+  }
+  const sel = S.selectedWeekDay;
+
+  // Calendar events data
+  const evAll = S.events || [];
+  const calIds = new Set(evAll.map(e => e.id));
+  const openTasks = openItems();
+
+  const daysHtml = weekDays.map((d, idx) => {
+    const isToday = d === t;
+    const isSel = d === sel;
+    const dateNum = parseYmd(d).getDate();
+    const letter = oneLetters[idx];
+
+    // Check if day has calendar event
+    const hasCalEv = evAll.some(e => e.day === d);
+    const hasCalTask = openTasks.some(i => i.due === d && i.cal && !calIds.has(i.cal.id));
+    const hasEvent = hasCalEv || hasCalTask;
+
+    return `
+      <button type="button" class="week-strip-day ${isToday ? 'today' : ''} ${isSel ? 'selected' : ''}" data-wday="${d}" aria-label="${letter} ${dateNum} ${isToday ? '(Today)' : ''}" aria-pressed="${isSel}">
+        <span class="week-strip-letter">${letter}</span>
+        <span class="week-strip-num">${dateNum}</span>
+        <span class="week-strip-dot ${hasEvent ? 'has-event' : ''}"></span>
+      </button>
+    `;
+  }).join('');
+
+  // Events preview for selected day (single line)
+  const selEvs = evAll.filter(e => e.day === sel).map(e => ({
+    time: e.allDay ? '' : e.time,
+    title: e.title || 'Untitled event'
+  }));
+  const selCalTasks = openTasks.filter(i => i.due === sel && i.cal && !calIds.has(i.cal.id)).map(i => ({
+    time: i.time || '',
+    title: i.title
+  }));
+  const allSel = [...selEvs, ...selCalTasks].sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99'));
+
+  let previewHtml = '';
+  if (!allSel.length) {
+    previewHtml = `<span class="week-strip-empty">Nothing on this day</span>`;
+  } else {
+    previewHtml = allSel.map(e => {
+      const timeStr = e.time ? `<span class="week-strip-time">${esc(fmtTime(e.time))}</span> ` : '';
+      return `${timeStr}${esc(e.title)}`;
+    }).join('  ·  ');
+  }
+
+  container.innerHTML = `
+    <div class="week-strip-days">${daysHtml}</div>
+    <div class="week-strip-events" id="week-strip-events">${previewHtml}</div>
+  `;
 }
 const nowLine = t => `<div class="now"><span>${fmtTime(t)}</span><i></i></div>`;
 function calNote() {

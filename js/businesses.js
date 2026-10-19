@@ -26,16 +26,39 @@ function renderClients() {
     setTopBtn('Manage clients', 'manage-clients');
     const cl = bizClients(b.id);
     const open = openItems().filter(i => cl.some(x => x.id === i.client) && i.kind !== 'note');
-    const monthly = cl.reduce((x, k) => x + (Number(k.retainer) || 0), 0);
-    const myShareTotal = cl.reduce((x, k) => x + (Number(k.yourShare !== undefined ? k.yourShare : k.retainer) || 0), 0);
+    const curPid = (S && S.profileId) || 'rahul';
+
+    const retClients = cl.filter(k => Number(k.retainer) > 0 && !k.oneTime);
+    const oneTimeClients = cl.filter(k => Number(k.oneTime) > 0);
+
+    const monthlyRetainers = retClients.reduce((x, k) => x + (Number(k.retainer) || 0), 0);
+    const myShareMonthly = retClients.reduce((x, k) => x + (clientShare(k, curPid) || 0), 0);
+    const myShareOneTime = oneTimeClients.reduce((x, k) => {
+      const s = clientShare(k, curPid);
+      if (s > 0) return x + s;
+      const sh = (k.shares && (k.shares[curPid] || k.shares['sri-chandana'] || k.shares.rahul)) || k.yourShare || 0;
+      return x + (Number(sh) || 0);
+    }, 0);
+
     $('#biz-head').innerHTML = `${b.cover ? `<div class="biz-banner" style="background-image:url('${esc(b.cover)}')"></div>` : ''}
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
         <button class="back-btn" type="button" data-back="all" style="margin-bottom:0"><svg><use href="#i-back"/></svg>All businesses</button>
         <button class="btn small" data-editbiz="${b.id}"><svg><use href="#i-pen"/></svg>Edit business</button>
       </div>
       <div class="glass detail-head"><div class="rev"><small>Revenue from ${esc(b.name)} clients</small><b>${inr(bizRevenue(b.id))}</b>${b.tagline ? `<span>${esc(b.tagline)}</span>` : ''}</div>
-      <div class="kv"><div><small>Clients</small><b>${cl.length}</b></div><div><small>Open work</small><b>${open.length}</b></div><div><small>Total retainers / mo</small><b class="mono">${monthly ? inr(monthly) : '—'}</b></div><div><small>Your share / mo</small><b class="mono">${myShareTotal ? inr(myShareTotal) : '—'}</b></div></div></div>`;
-    $('#clients-list').innerHTML = cl.length ? cl.map(clientCard).join('') : `<div class="empty">No clients in ${esc(b.name)} yet. Tap "Manage clients" to add or organize.</div>`;
+      <div class="kv">
+        <div><small>Clients</small><b>${cl.length}</b></div>
+        <div><small>Open work</small><b>${open.length}</b></div>
+        <div><small>Total retainers / mo</small><b class="mono">${monthlyRetainers ? inr(monthlyRetainers) : '—'}</b></div>
+        <div><small>Your share / mo</small><b class="mono">${myShareMonthly ? inr(myShareMonthly) : '—'}</b></div>
+        ${myShareOneTime || oneTimeClients.length ? `<div><small>Your one-time share</small><b class="mono">${myShareOneTime ? inr(myShareOneTime) : '—'}</b></div>` : ''}
+      </div></div>`;
+    
+    if (!cl.length) {
+      $('#clients-list').innerHTML = `<div class="empty">No clients in ${esc(b.name)} yet. Tap "Manage clients" to add or organize.</div>`;
+    } else {
+      $('#clients-list').innerHTML = `<div class="folders">${cl.map(clientCard).join('')}</div>`;
+    }
     return;
   }
   setTopBtn('Manage clients', 'manage-clients');
@@ -46,22 +69,32 @@ function renderClients() {
   const pending = mine.filter(i => i.kind === 'payment' && i.status !== 'done').reduce((s, i) => s + (i.amount || 0), 0);
   const rev = clientRevenue(c.id);
   const mk = today().slice(0, 7);
-  const revMonth = mine.filter(i => i.kind === 'payment' && i.status === 'done' && i.doneAt && ymd(new Date(i.doneAt)).startsWith(mk)).reduce((x, i) => x + (i.amount || 0), 0);
+  let revMonth = mine.filter(i => i.kind === 'payment' && i.status === 'done' && i.doneAt && ymd(new Date(i.doneAt)).startsWith(mk)).reduce((x, i) => x + (i.amount || 0), 0);
+  if (!revMonth && rev > 0) revMonth = rev;
   const signed = c.signed || c.since || '';
+  const curPid = (S && S.profileId) || 'rahul';
+  const myShare = clientShare(c, curPid);
+  const teamMembers = typeof getTeamMembersForClient === 'function' ? getTeamMembersForClient(c) : PROFILES;
+  const otherMembers = teamMembers.filter(m => m.id !== curPid);
+  const otherSharesHtml = otherMembers.map(m => {
+    const s = clientShare(c, m.id);
+    return `<div><small>${esc(m.name)}'s Share</small><b class="mono">${s ? inr(s) + (c.oneTime ? ' (Fixed)' : ' / mo') : '—'}</b></div>`;
+  }).join('');
+
   $('#client-head').innerHTML = `
     ${c.cover ? `<div class="client-banner" style="background-image:url('${esc(c.cover)}')"></div>` : ''}
     <button class="back-btn" type="button" data-back="biz"><svg><use href="#i-back"/></svg>Back to ${esc((bizById(clientBiz(c)) || {}).name || "clients")}</button>
     <div class="glass detail-head">
     <div class="dh-top">
-      <div style="min-width:0">${starRow(starsOf(c))}<span class="dh-rate">${starsOf(c).toFixed(1)} / 5</span>
-        <div class="muted" style="font-size:13px;margin-top:4px">${esc(c.note || 'Client')}</div></div>
+      <div style="min-width:0">${starRow(starsOf(c))}<span class="dh-rate">${starsOf(c).toFixed(1)} / 5</span></div>
       <div class="dh-actions"><button class="btn small" data-editclient="${c.id}"><svg><use href="#i-pen"/></svg>Edit client</button><button class="btn small primary" data-logpay="${c.id}">Log payment</button></div>
     </div>
-    <div class="rev"><small>Revenue from ${esc(c.short || c.name)}</small><b>${inr(rev)}</b><span>${revMonth ? inr(revMonth) + ' this month' : 'Nothing received this month yet'}${pending ? ' · ' + inr(pending) + ' pending' : ''}</span></div>
+    <div class="rev"><small>Revenue from ${esc(c.short || c.name)}</small><b>${inr(rev)}</b><span>${inr(revMonth)} this month${pending ? ' · ' + inr(pending) + ' pending' : ''}</span></div>
     <div class="kv">
       <div><small>Contract signed</small><b>${signed ? esc(parseYmd(signed).toLocaleDateString('en-IN',{day:'numeric', month:'short', year:'numeric'})) : '—'}</b></div>
-      <div><small>Total Retainer</small><b class="mono">${c.retainer ? inr(c.retainer) : '—'}</b></div>
-      <div><small>Your Share</small><b class="mono">${c.yourShare ? inr(c.yourShare) : (c.retainer ? inr(c.retainer) : '—')}</b></div>
+      <div><small>Total</small><b class="mono">${(c.oneTime ? inr(c.oneTime) : (c.retainer ? inr(c.retainer) + ' / mo' : '—'))}</b></div>
+      <div><small>Your Share</small><b class="mono">${myShare ? inr(myShare) + (c.oneTime ? ' (Fixed)' : ' / mo') : '—'}</b></div>
+      ${otherSharesHtml}
       <div><small>Open work</small><b>${open.length}</b></div>
     </div></div>`;
   $$('#client-tabs button').forEach(b => b.setAttribute('aria-pressed', b.dataset.ctab === S.ctab));

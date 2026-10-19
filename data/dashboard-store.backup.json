@@ -1,0 +1,433 @@
+{
+  "lastUpdated": 1792309657980,
+  "chat_messages": [],
+  "pending_chat_notifications": [],
+  "settings_rahul": {
+    "name": "Rahul",
+    "email": "rahulchandrakondamu@gmail.com",
+    "businesses": [
+      {
+        "id": "biz-revflow",
+        "name": "RevFlow",
+        "kind": "agency",
+        "tagline": ""
+      },
+      {
+        "id": "biz-weblit",
+        "name": "WEBLIT",
+        "kind": "agency",
+        "tagline": ""
+      },
+      {
+        "id": "biz-larping",
+        "name": "LARPING",
+        "kind": "product",
+        "tagline": ""
+      }
+    ],
+    "clients": [
+      {
+        "id": "cl-nivri",
+        "name": "Nivrishikhara",
+        "short": "Nivri",
+        "stars": 5,
+        "retainer": 50000,
+        "yourShare": 35000,
+        "note": "Performance marketing & ad creatives",
+        "color": 0,
+        "signed": "2026-10-01",
+        "biz": "biz-revflow"
+      }
+    ],
+    "goals": [
+      {
+        "id": "goal-dubai",
+        "name": "Dubai trip",
+        "target": 250000,
+        "saved": 175000,
+        "date": "2026-11-25",
+        "note": "1 week with the crew"
+      },
+      {
+        "id": "goal-bali",
+        "name": "Bali trip",
+        "target": 200000,
+        "saved": 85000,
+        "date": "2027-01-17",
+        "note": "Villa & surf"
+      }
+    ],
+    "wishlist": [
+      {
+        "id": "wish-1",
+        "name": "Linen shirts & shades",
+        "cost": 12000,
+        "cat": "Trip",
+        "goal": "goal-dubai",
+        "note": "Dubai prep",
+        "bought": false
+      },
+      {
+        "id": "wish-2",
+        "name": "Noise-cancelling headphones",
+        "cost": 24000,
+        "cat": "Tech",
+        "goal": "",
+        "note": "Travel & deep work",
+        "bought": false
+      }
+    ],
+    "peakStart": "10:00",
+    "peakEnd": "13:00",
+    "dayStart": "09:00",
+    "dayEnd": "21:00"
+  },
+  "items_rahul": [
+    {
+      "id": "it-6",
+      "kind": "task",
+      "title": "Fix audio desync when switching playback speed on mobile",
+      "client": "",
+      "person": "",
+      "due": "",
+      "time": "",
+      "priority": "high",
+      "status": "open",
+      "created": 1791942745786,
+      "biz": "biz-larping",
+      "amount": 0,
+      "notes": "",
+      "cal": null
+    },
+    {
+      "id": "it-7",
+      "kind": "task",
+      "title": "Fix dark mode toggle flickering white on first load",
+      "client": "",
+      "person": "",
+      "due": "",
+      "time": "",
+      "priority": "med",
+      "status": "open",
+      "created": 1791912745787,
+      "biz": "biz-larping",
+      "amount": 0,
+      "notes": "",
+      "cal": null
+    },
+    {
+      "id": "it-8",
+      "kind": "task",
+      "title": "Fix video export failure on iOS Safari background tab",
+      "client": "",
+      "person": "",
+      "due": "",
+      "time": "",
+      "priority": "med",
+      "status": "done",
+      "doneAt": 1791962745787,
+      "created": 1791882745787,
+      "biz": "biz-larping",
+      "amount": 0,
+      "notes": "",
+      "cal": null
+    },
+    {
+      "id": "it-9",
+      "kind": "reel",
+      "title": "Day in the life running 3 businesses at 22",
+      "client": "",
+      "person": "",
+      "due": "",
+      "time": "",
+      "priority": "med",
+      "status": "open",
+      "created": 1791952745787,
+      "biz": "biz-larping",
+      "amount": 0,
+      "notes": "Behind-the-scenes B-roll showing Command",
+      "stage": "shoot",
+      "link": "",
+      "cal": null
+    },
+    {
+      "id": "it-10",
+      "kind": "reel",
+      "title": "Why I stopped using frameworks and built my own command center",
+      "client": "",
+      "person": "",
+      "due": "2026-10-12",
+      "time": "14:00",
+      "priority": "high",
+      "status": "done",
+      "doneAt": 1791886345787,
+      "biz": "biz-larping",
+      "amount": 0,
+      "notes": "Posted to IG Reels",
+      "stage": "posted",
+      "link": "https://instagram.com/reel/example",
+      "cal": null
+    }
+  ],
+  "settings_sri-chandana": {
+    "name": "Sri Chandana",
+    "email": "srichandana1026@gmail.com",
+    "businesses": [
+      {
+        "id": "biz-weblit",
+        "name": "WEBLIT",
+        "kind": "agency",
+        "tagline": ""
+      },
+      {
+        "id": "biz-larping",
+        "name": "LARPING",
+        "kind": "product",
+        "tagline": ""
+      },
+      {
+        "id": "6kydacdivorp",
+        "name": "RevFlow",
+        "kind": "agency",
+        "tagline": "",
+        "cover": ""
+      }
+    ],
+    "clients": [
+      {
+        "id": "cl-nivri",
+        "name": "Nivrishikhara",
+        "short": "",
+        "stars": 5,
+        "retainer": 22000,
+        "yourShare": 4000,
+        "note": "",
+        "color": 0,
+        "signed": "2026-10-01",
+        "biz": "biz-revflow",
+        "oneTime": 0,
+        "cover": ""
+      },
+      {
+        "id": "va1i4bytbe4k",
+        "name": "Lalitha Clinic",
+        "short": "Lalitha",
+        "stars": 4,
+        "retainer": 30000,
+        "yourShare": 20000,
+        "note": "Healthcare clinic branding & local SEO",
+        "color": 2,
+        "signed": "2026-10-01",
+        "biz": "biz-revflow"
+      }
+    ],
+    "goals": [
+      {
+        "id": "goal-dubai",
+        "name": "Dubai trip",
+        "target": 250000,
+        "saved": 175000,
+        "date": "2026-11-25",
+        "note": "1 week with the crew"
+      },
+      {
+        "id": "goal-bali",
+        "name": "Bali trip",
+        "target": 200000,
+        "saved": 85000,
+        "date": "2027-01-17",
+        "note": "Villa & surf"
+      }
+    ],
+    "wishlist": [
+      {
+        "id": "wish-1",
+        "name": "Linen shirts & shades",
+        "cost": 12000,
+        "cat": "Trip",
+        "goal": "goal-dubai",
+        "note": "Dubai prep",
+        "bought": false
+      },
+      {
+        "id": "wish-2",
+        "name": "Noise-cancelling headphones",
+        "cost": 24000,
+        "cat": "Tech",
+        "goal": "",
+        "note": "Travel & deep work",
+        "bought": false
+      }
+    ],
+    "peakStart": "10:00",
+    "peakEnd": "13:00",
+    "dayStart": "09:00",
+    "dayEnd": "21:00",
+    "streakStarted": false
+  },
+  "items_sri-chandana": [
+    {
+      "id": "z4deomnon38",
+      "kind": "task",
+      "title": "Fix the favicon issue with Nirvishikhara's site.",
+      "client": "",
+      "biz": "biz-revflow",
+      "category": "Web",
+      "due": "2026-10-14",
+      "time": "",
+      "duration": 60,
+      "priority": "med",
+      "status": "done",
+      "isFocus": true,
+      "notes": "",
+      "link": "",
+      "cal": null,
+      "created": 1791956513822,
+      "fromProfileId": "sri-chandana",
+      "person": "",
+      "amount": 0,
+      "updated": 1792309383569,
+      "doneAt": 1792309383569
+    },
+    {
+      "id": "8nohefeonn6",
+      "kind": "task",
+      "title": "Connect Meta APIs to Revflow's Site",
+      "client": "",
+      "biz": "biz-revflow",
+      "category": "Automations",
+      "due": "2026-10-14",
+      "time": "",
+      "duration": 60,
+      "priority": "high",
+      "status": "open",
+      "isFocus": true,
+      "notes": "",
+      "link": "",
+      "cal": null,
+      "created": 1791956535438,
+      "fromProfileId": "sri-chandana"
+    },
+    {
+      "id": "lal78jpoombr",
+      "kind": "task",
+      "title": "Improvise wallet features, shopify notifications..",
+      "client": "",
+      "biz": "biz-larping",
+      "category": "Automations",
+      "due": "2026-10-14",
+      "time": "",
+      "duration": 60,
+      "priority": "med",
+      "status": "open",
+      "isFocus": true,
+      "notes": "",
+      "link": "",
+      "cal": null,
+      "created": 1791956890000,
+      "fromProfileId": "sri-chandana"
+    },
+    {
+      "id": "1dkfhhor3ufkn",
+      "kind": "promise",
+      "title": "i will buy you flowersss!",
+      "person": "Rahul",
+      "client": "",
+      "biz": "",
+      "due": "2026-10-29",
+      "time": "10:15",
+      "duration": 60,
+      "priority": "high",
+      "status": "open",
+      "notes": "Promise: i will buy you flowerssss",
+      "link": "https://calendar.google.com/calendar/render?action=TEMPLATE&text=Promise%3A%20i%20will%20buy%20you%20flowersss!&dates=20261029T101500/20261029T111500&details=For%20Rahul%0AAdded%20from%20Command",
+      "cal": {
+        "id": "ev-flowers",
+        "day": "2026-10-29"
+      },
+      "created": 1791960654800,
+      "fromProfileId": "sri-chandana"
+    }
+  ],
+  "settings_adithya": {
+    "name": "Adithya",
+    "email": "gurrapuadithya10@gmail.com",
+    "businesses": [
+      {
+        "id": "biz-revflow",
+        "name": "RevFlow",
+        "kind": "agency",
+        "tagline": ""
+      },
+      {
+        "id": "biz-weblit",
+        "name": "WEBLIT",
+        "kind": "agency",
+        "tagline": ""
+      },
+      {
+        "id": "biz-larping",
+        "name": "LARPING",
+        "kind": "product",
+        "tagline": ""
+      }
+    ],
+    "clients": [
+      {
+        "id": "cl-nivri",
+        "name": "Nivrishikhara",
+        "short": "Nivri",
+        "stars": 5,
+        "retainer": 50000,
+        "yourShare": 35000,
+        "note": "Performance marketing & ad creatives",
+        "color": 0,
+        "signed": "2026-10-01",
+        "biz": "biz-revflow"
+      }
+    ],
+    "goals": [
+      {
+        "id": "goal-dubai",
+        "name": "Dubai trip",
+        "target": 250000,
+        "saved": 175000,
+        "date": "2026-11-25",
+        "note": "1 week with the crew"
+      },
+      {
+        "id": "goal-bali",
+        "name": "Bali trip",
+        "target": 200000,
+        "saved": 85000,
+        "date": "2027-01-17",
+        "note": "Villa & surf"
+      }
+    ],
+    "wishlist": [
+      {
+        "id": "wish-1",
+        "name": "Linen shirts & shades",
+        "cost": 12000,
+        "cat": "Trip",
+        "goal": "goal-dubai",
+        "note": "Dubai prep",
+        "bought": false
+      },
+      {
+        "id": "wish-2",
+        "name": "Noise-cancelling headphones",
+        "cost": 24000,
+        "cat": "Tech",
+        "goal": "",
+        "note": "Travel & deep work",
+        "bought": false
+      }
+    ],
+    "peakStart": "10:00",
+    "peakEnd": "13:00",
+    "dayStart": "09:00",
+    "dayEnd": "21:00"
+  },
+  "items_adithya": []
+}

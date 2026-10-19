@@ -5,6 +5,7 @@ function defaultCrushersFor(pid) {
     weekTitle: '( WEEK 01 )  This Week’s Focus:',
     focusGoal: '',
     hideFocusGoal: false,
+    weekStreak: 0,
     goals: [
       { id: newId(), text: '', targetScore: 2, earnedScore: 0, done: false }
     ],
@@ -58,6 +59,7 @@ function getProfileCrushers(pid = (S && S.profileId) || 'rahul') {
 
 function saveProfileCrushers(data, pid = (S && S.profileId) || 'rahul') {
   lsSet(`cmd.crushers_${pid}`, data);
+  if (typeof pushAllToServer === 'function') pushAllToServer();
 }
 
 function toggleCrusherGoal(goalId) {
@@ -69,6 +71,14 @@ function toggleCrusherGoal(goalId) {
   const target = Number(goal.targetScore) || 2;
   goal.earnedScore = goal.done ? target : 0;
   saveProfileCrushers(data, pid);
+  if (typeof recordHistory === 'function') {
+    recordHistory({
+      action: goal.done ? 'complete' : 'reopen',
+      category: 'crusher',
+      title: goal.text || 'Goal Crusher',
+      details: goal.done ? `Earned: +${target} pts` : 'Marked open'
+    });
+  }
   if (typeof renderCrushersMini === 'function') renderCrushersMini();
   if (typeof renderGoalCrushers === 'function' && S && S.view === 'crushers') renderGoalCrushers();
   toast(goal.done ? `Goal crushed! (+${target} pts)` : 'Goal marked open.');
@@ -84,49 +94,74 @@ function renderGoalCrushers() {
   const data = getProfileCrushers(pid);
   const goals = data.goals || [];
 
-  const totalEarned = goals.reduce((sum, g) => sum + (g.done ? (Number(g.targetScore) || 0) : (Number(g.earnedScore) || 0)), 0);
+  const totalEarned = goals.reduce((sum, g) => sum + (g.done ? (Number(g.targetScore) || 2) : (Number(g.earnedScore) || 0)), 0);
+  const currentWeekHit = totalEarned >= 7;
+  const baseStreak = Number(data.weekStreak) || 0;
+  const displayStreak = baseStreak + (currentWeekHit ? 1 : 0);
+  const streakPct = Math.min(100, Math.round(totalEarned / 7 * 100));
 
   container.innerHTML = `
+    <!-- WEEK STREAK (Qualifies only with 7+ pts) -->
+    <div class="c-week-streak-card" style="grid-column:1/-1;margin-bottom:20px;padding:16px 20px;background:var(--surface);border-radius:16px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap">
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--muted);text-transform:uppercase">Weekly Streak · Goal Crushers</div>
+        <div style="font-size:24px;font-weight:800;letter-spacing:-0.5px;color:var(--ink);display:flex;align-items:baseline;gap:8px">
+          <span>${displayStreak}</span>
+          <span style="font-size:13px;font-weight:600;color:var(--muted)">${displayStreak === 1 ? 'WEEK' : 'WEEKS'}</span>
+          ${currentWeekHit ? '<span class="chip" style="font-size:11px;padding:2px 8px;background:var(--ink);color:var(--bg)">✓ 7+ Pts Unlocked</span>' : ''}
+        </div>
+      </div>
+      <div style="flex:1;min-width:220px;max-width:380px">
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px">
+          <span style="font-weight:600;color:var(--ink)">${totalEarned} / 7 pts</span>
+          <span class="faint">${currentWeekHit ? 'Streak qualified for this week!' : `${7 - totalEarned} pts needed to hit streak`}</span>
+        </div>
+        <div style="width:100%;height:8px;background:var(--surface-3);border-radius:4px;overflow:hidden">
+          <div style="width:${streakPct}%;height:100%;background:var(--ink);border-radius:4px;transition:width 0.3s ease"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- TABLE 1: This Week's Focus & Goals -->
-    <div class="crushers-card crushers-tasks-card" data-pid="${esc(pid)}">
+    <div class="crushers-card crushers-tasks-card" data-pid="${esc(pid)}" style="background:var(--surface)!important">
       <!-- Week Title -->
-      <div class="c-week-header" contenteditable="true" data-crusher="weekTitle" spellcheck="false" title="Click to edit week title">${esc(data.weekTitle)}</div>
+      <div class="c-week-header" contenteditable="true" data-crusher="weekTitle" spellcheck="false" title="Click to edit week title" style="background:var(--surface)!important">${esc(data.weekTitle)}</div>
       
       <!-- Focus Goal -->
       ${data.hideFocusGoal ? `
-        <div style="padding:10px 16px;text-align:center;border-bottom:1px solid var(--hair);background:var(--surface-2)">
+        <div style="padding:10px 16px;text-align:center;background:var(--surface)!important">
           <button type="button" class="btn small" data-action="restore-focus-goal" style="padding:4px 10px;font-size:12px;display:inline-flex;align-items:center;gap:4px">
             <svg style="width:12px;height:12px"><use href="#i-plus"/></svg>Add Weekly Focus Goal
           </button>
         </div>
       ` : `
-        <div class="c-focus-goal-wrap">
-          <div class="c-focus-goal ${!data.focusGoal ? 'is-empty' : ''}" contenteditable="true" data-crusher="focusGoal" spellcheck="false" data-placeholder="What is your main focus this week?" title="Click to edit focus goal">${esc(data.focusGoal || '')}</div>
+        <div class="c-focus-goal-wrap" style="background:var(--surface)!important">
+          <div class="c-focus-goal ${!data.focusGoal ? 'is-empty' : ''}" contenteditable="true" data-crusher="focusGoal" spellcheck="false" data-placeholder="What is your main focus this week?" title="Click to edit focus goal" style="background:var(--surface)!important">${esc(data.focusGoal || '')}</div>
           <button type="button" class="c-focus-del" data-action="remove-focus-goal" aria-label="Remove focus goal" title="Remove focus goal">&times;</button>
         </div>
       `}
       
       <!-- Subheading / Column Headers -->
-      <div class="c-tasks-thead">
+      <div class="c-tasks-thead" style="background:var(--surface)!important">
         <div></div>
-        <div class="c-th-left">Break the focus down into weekly goals</div>
-        <div class="c-th-right">Score</div>
+        <div class="c-th-left" style="background:var(--surface)!important">Break the focus down into weekly goals</div>
+        <div class="c-th-right" style="background:var(--surface)!important">Score</div>
       </div>
 
       <!-- Goal rows -->
-      <div class="c-task-rows">
+      <div class="c-task-rows" style="background:var(--surface)!important">
         ${goals.map(it => {
           const target = Number(it.targetScore) || 2;
           const earned = it.done ? target : (Number(it.earnedScore) || 0);
           return `
-            <div class="c-goal-row ${it.done ? 'done' : ''}" data-goal-id="${esc(it.id)}">
-              <div class="c-goal-check-wrap">
+            <div class="c-goal-row ${it.done ? 'done' : ''}" data-goal-id="${esc(it.id)}" style="background:var(--surface)!important">
+              <div class="c-goal-check-wrap" style="background:var(--surface)!important">
                 <button type="button" class="check" data-toggle-crusher="${esc(it.id)}" aria-label="${it.done ? 'Mark incomplete' : 'Mark completed'}">
                   <svg><use href="#i-check"/></svg>
                 </button>
               </div>
-              <div class="c-goal-desc ${!it.text ? 'is-empty' : ''}" contenteditable="true" data-goal-field="text" spellcheck="false" data-placeholder="Still haven't listed out, huh...">${esc(it.text || '')}</div>
-              <div class="c-goal-score-wrap">
+              <div class="c-goal-desc ${!it.text ? 'is-empty' : ''}" contenteditable="true" data-goal-field="text" spellcheck="false" data-placeholder="Still haven't listed out, huh..." style="background:var(--surface)!important">${esc(it.text || '')}</div>
+              <div class="c-goal-score-wrap" style="background:var(--surface)!important">
                 <span class="c-goal-score-current">${it.done ? target : (earned > 0 ? earned : '__')}</span>
                 <span>/</span>
                 <span class="c-goal-score-target" contenteditable="true" data-goal-field="targetScore" spellcheck="false" title="Click to edit target points">${target}</span>
@@ -138,37 +173,37 @@ function renderGoalCrushers() {
       </div>
 
       <!-- Add Goal Row Footer -->
-      <div class="c-goals-footer">
+      <div class="c-goals-footer" style="background:var(--surface)!important">
         <button type="button" class="btn small" data-action="add-crusher-goal" style="padding:6px 12px;font-size:12.5px;color:var(--muted)">
           <svg style="width:12px;height:12px;margin-right:4px"><use href="#i-plus"/></svg>Add Goal
         </button>
       </div>
 
       <!-- Total Row -->
-      <div class="c-total-row">
-        <div class="c-total-label">Total</div>
-        <div class="c-total-score"><span id="crusher-total-val">${totalEarned > 0 ? totalEarned : '__'}</span><span class="c-total-max">/10</span></div>
+      <div class="c-total-row" style="background:var(--surface)!important">
+        <div class="c-total-label" style="background:var(--surface)!important">Total</div>
+        <div class="c-total-score" style="background:var(--surface)!important"><span id="crusher-total-val">${totalEarned > 0 ? totalEarned : '__'}</span><span class="c-total-max">/10</span></div>
       </div>
     </div>
 
     <!-- TABLE 2: Rewards -->
-    <div class="crushers-card crushers-rewards-card" data-pid="${esc(pid)}">
+    <div class="crushers-card crushers-rewards-card" data-pid="${esc(pid)}" style="background:var(--surface)!important">
       <!-- Reward Header -->
-      <div class="c-reward-header">Reward</div>
+      <div class="c-reward-header" style="background:var(--surface)!important">Reward</div>
 
       <!-- Reward rows -->
-      <div class="c-reward-rows">
+      <div class="c-reward-rows" style="background:var(--surface)!important">
         ${(data.rewards || []).map(r => `
-          <div class="c-reward-row" data-reward-id="${esc(r.id)}">
-            <div class="c-reward-pts" contenteditable="true" data-reward-field="points" spellcheck="false" title="Click to edit threshold">${esc(r.points)}</div>
-            <div class="c-reward-desc-wrap">
-              <div class="c-reward-desc ${!r.reward ? 'is-empty' : ''}" contenteditable="true" data-reward-field="reward" spellcheck="false" data-placeholder="Add a reward for reaching this tier...">${esc(r.reward || '')}</div>
+          <div class="c-reward-row" data-reward-id="${esc(r.id)}" style="background:var(--surface)!important">
+            <div class="c-reward-pts" contenteditable="true" data-reward-field="points" spellcheck="false" title="Click to edit threshold" style="background:var(--surface)!important">${esc(r.points)}</div>
+            <div class="c-reward-desc-wrap" style="background:var(--surface)!important">
+              <div class="c-reward-desc ${!r.reward ? 'is-empty' : ''}" contenteditable="true" data-reward-field="reward" spellcheck="false" data-placeholder="Add a reward for reaching this tier..." style="background:var(--surface)!important">${esc(r.reward || '')}</div>
               <button type="button" class="c-row-del" data-del-crusher-reward="${esc(r.id)}" aria-label="Delete reward tier" title="Delete reward tier">&times;</button>
             </div>
           </div>
         `).join('')}
       </div>
-      <div style="padding:8px 12px;background:var(--surface);border-top:1px solid var(--hair)">
+      <div style="padding:8px 12px;background:var(--surface)!important">
         <button type="button" class="btn small" data-action="add-crusher-reward" style="padding:4px 10px;font-size:12px;color:var(--muted)">
           <svg style="width:11px;height:11px;margin-right:4px"><use href="#i-plus"/></svg>Add Reward Tier
         </button>
@@ -278,13 +313,19 @@ function renderCrushersMini() {
     return;
   }
 
-  const totalEarned = activeGoals.reduce((sum, g) => sum + (g.done ? (Number(g.targetScore) || 0) : (Number(g.earnedScore) || 0)), 0);
+  const totalEarned = activeGoals.reduce((sum, g) => sum + (g.done ? (Number(g.targetScore) || 2) : (Number(g.earnedScore) || 0)), 0);
+  const currentWeekHit = totalEarned >= 7;
+  const baseStreak = Number(data.weekStreak) || 0;
+  const displayStreak = baseStreak + (currentWeekHit ? 1 : 0);
 
   container.innerHTML = `
     <div class="card crushers-home-card">
       <div class="crushers-card-header">
-        <span class="crushers-card-header-label">Weekly Goals</span>
-        <span class="crushers-card-header-score">${totalEarned > 0 ? totalEarned : '__'} / 10</span>
+        <span class="crushers-card-header-label">This Week’s Crushers</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="chip" style="font-size:11px;padding:2px 8px;font-weight:600;background:var(--surface-3);color:var(--ink)">⚡ ${displayStreak}W Streak</span>
+          <span class="crushers-card-header-score">${totalEarned > 0 ? totalEarned : '__'} / 10</span>
+        </div>
       </div>
       <div class="crushers-card-list">
         ${activeGoals.map(it => {

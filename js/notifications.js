@@ -82,6 +82,7 @@ function ensureDynamicIslandDOM() {
           <div class="island-title" id="island-title">Notification</div>
           <div class="island-msg" id="island-msg">Message details</div>
         </div>
+        <div class="island-actions" id="island-actions" style="display:none"></div>
         <div class="island-meta" id="island-meta">
           <span class="island-badge" id="island-badge" style="display:none">Soon</span>
           <button type="button" class="island-close" id="island-close" aria-label="Dismiss">&times;</button>
@@ -98,7 +99,8 @@ function ensureDynamicIslandDOM() {
       dismissDynamicNotification();
     });
 
-    islandEl.addEventListener('click', () => {
+    islandEl.addEventListener('click', e => {
+      if (e.target.closest('.island-btn') || e.target.closest('.island-close')) return;
       if (islandEl._onPress && typeof islandEl._onPress === 'function') {
         const fn = islandEl._onPress;
         dismissDynamicNotification();
@@ -118,6 +120,7 @@ function ensureDynamicIslandDOM() {
  * @param {string} [opts.message] - Explanatory subtitle
  * @param {string} [opts.avatar] - Image URL or single letter / initial
  * @param {string} [opts.badge] - Small deadline/status pill (e.g. 'In 2h')
+ * @param {Array<{label: string, cls?: string, onClick: Function}>} [opts.actions] - Action buttons
  * @param {number|null} [opts.duration] - Lifetime in ms (default 4500, null for persistent)
  * @param {Function} [opts.onPress] - Click handler
  */
@@ -128,6 +131,7 @@ function triggerDynamicNotification(opts = {}) {
   const titleEl = document.getElementById('island-title');
   const msgEl = document.getElementById('island-msg');
   const badgeEl = document.getElementById('island-badge');
+  const actionsEl = document.getElementById('island-actions');
 
   if (!island) return;
 
@@ -140,6 +144,32 @@ function triggerDynamicNotification(opts = {}) {
   titleEl.textContent = opts.title || 'Alert';
   msgEl.textContent = opts.message || '';
   island._onPress = opts.onPress || null;
+
+  // Actions (e.g. Yes / No buttons)
+  if (Array.isArray(opts.actions) && opts.actions.length > 0) {
+    island.classList.add('has-actions');
+    if (actionsEl) {
+      actionsEl.style.display = 'flex';
+      actionsEl.innerHTML = opts.actions.map((act, idx) => `
+        <button type="button" class="island-btn ${act.cls || ''}" data-act-idx="${idx}">${esc(act.label)}</button>
+      `).join('');
+      actionsEl.querySelectorAll('.island-btn').forEach(btn => {
+        btn.onclick = e => {
+          e.stopPropagation();
+          const act = opts.actions[Number(btn.dataset.actIdx)];
+          if (act && typeof act.onClick === 'function') {
+            act.onClick();
+          }
+        };
+      });
+    }
+  } else {
+    island.classList.remove('has-actions');
+    if (actionsEl) {
+      actionsEl.style.display = 'none';
+      actionsEl.innerHTML = '';
+    }
+  }
 
   // Avatar / Icon
   if (opts.avatar && (opts.avatar.startsWith('http') || opts.avatar.startsWith('assets/') || opts.avatar.startsWith('data:'))) {
@@ -195,7 +225,13 @@ function dismissDynamicNotification() {
   const island = document.getElementById('dynamic-island');
   if (island) {
     island.classList.remove('active');
+    island.classList.remove('has-actions');
     island._onPress = null;
+    const actionsEl = document.getElementById('island-actions');
+    if (actionsEl) {
+      actionsEl.style.display = 'none';
+      actionsEl.innerHTML = '';
+    }
   }
   if (dynamicIslandTimer) {
     clearTimeout(dynamicIslandTimer);
@@ -341,7 +377,7 @@ function openNotificationSettingsSheet() {
     </div>
 
     <!-- DAY BEFORE SCHEDULED POST -->
-    <div style="margin-bottom:16px;padding:12px 14px;background:var(--surface-2);border-radius:12px;border:1px solid var(--hair);display:flex;align-items:center;justify-content:space-between">
+    <div style="margin-bottom:16px;padding:12px 14px;background:var(--surface-2);border-radius:12px;display:flex;align-items:center;justify-content:space-between">
       <div>
         <b style="font-size:13.5px;display:block">Day Before Scheduled Posts</b>
         <span class="faint" style="font-size:12px">Alert 1 day before reels and scheduled content</span>
@@ -352,7 +388,7 @@ function openNotificationSettingsSheet() {
     </div>
 
     <!-- AUDIO CHIME -->
-    <div style="margin-bottom:16px;padding:12px 14px;background:var(--surface-2);border-radius:12px;border:1px solid var(--hair);display:flex;align-items:center;justify-content:space-between">
+    <div style="margin-bottom:16px;padding:12px 14px;background:var(--surface-2);border-radius:12px;display:flex;align-items:center;justify-content:space-between">
       <div>
         <b style="font-size:13.5px;display:block">Audio Chime</b>
         <span class="faint" style="font-size:12px">Subtle sound when alert appears</span>
@@ -363,7 +399,7 @@ function openNotificationSettingsSheet() {
     </div>
 
     <!-- BROWSER DESKTOP ALERTS -->
-    <div style="margin-bottom:20px;padding:12px 14px;background:var(--surface-2);border-radius:12px;border:1px solid var(--hair)">
+    <div style="margin-bottom:20px;padding:12px 14px;background:var(--surface-2);border-radius:12px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
         <div>
           <b style="font-size:13.5px;display:block">Browser Desktop Notifications</b>

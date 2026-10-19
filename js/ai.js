@@ -13,7 +13,7 @@ function sampleErr(e) {
     default: return 'Could not reach Claude just now. Try again.';
   }
 }
-function clientsForAI() { return clients().map(c => ({ id: c.id, name: c.name, short: c.short || '', rating: starsOf(c) + '/5 (higher = more important)', note: c.note || '' })); }
+function clientsForAI() { return clients().map(c => ({ id: c.id, name: c.name, short: c.short || '', rating: starsOf(c) + '/5 (higher = more important)' })); }
 function nowStamp() { const d = new Date(); return `${today()} (${d.toLocaleDateString('en-IN',{weekday:'long'})}) ${pad(d.getHours())}:${pad(d.getMinutes())}, timezone ${TZ}`; }
 
 function parseNotesLocally(rawText) {
@@ -47,25 +47,12 @@ function parseNotesLocally(rawText) {
       kind = 'note';
     }
 
-    // Client detection
-    let clientId = '';
-    let matchedClient = null;
-    for (const c of allClients) {
-      const cName = c.name.toLowerCase();
-      const cShort = (c.short || '').toLowerCase();
-      if ((cShort && lower.includes(cShort)) || lower.includes(cName)) {
-        clientId = c.id;
-        matchedClient = c;
-        break;
-      }
-    }
-
-    // Business detection
-    let bizId = '';
+    // Client & Business detection via smart matcher
+    const matched = typeof matchClientAndBizFromText === 'function' ? matchClientAndBizFromText(line) : { client: null, biz: null };
+    let clientId = matched.client ? matched.client.id : '';
+    let bizId = matched.biz ? matched.biz.id : (matched.client ? clientBiz(matched.client) : '');
     if (kind === 'glitch' || kind === 'reel') {
       bizId = productBiz();
-    } else if (matchedClient) {
-      bizId = clientBiz(matchedClient);
     }
 
     // Person detection
@@ -177,8 +164,9 @@ function parseNotesLocally(rawText) {
       title,
       client: clientId,
       biz: bizId,
+      isFocus: kind === 'task',
       person,
-      due,
+      due: due || (kind === 'task' ? t : ''),
       time,
       priority,
       amount,
@@ -258,6 +246,15 @@ ${text}
     const out = parseNotesLocally(text);
     if (!out.items.length) {
       quickTask();
+    } else if (out.items.length === 1 && out.items[0].kind === 'task') {
+      // Single task: directly save to focus under its business
+      const it = out.items[0];
+      it.isFocus = true;
+      if (!it.due) it.due = today();
+      await saveItem(it);
+      $('#dump').value = ''; if (typeof autoGrow === 'function') autoGrow($('#dump')); lsSet('cmd.draft', '');
+      const b = bizById(taskBiz(it));
+      toast(`Saved to Focus${b ? ' under ' + b.name : ''}.`);
     } else {
       S.review = out;
       renderReview();
@@ -272,7 +269,7 @@ ${text}
 function renderReview() {
   const box = $('#review');
   if (!S.review) { box.hidden = true; box.innerHTML = ''; return; }
-  const copts = sel => `<option value="">No client</option>` + clients().map(c => `<option value="${c.id}" ${c.id === sel ? 'selected' : ''}>${esc(c.short || c.name)}</option>`).join('');
+  const copts = sel => `<option value="">Client</option>` + clients().map(c => `<option value="${c.id}" ${c.id === sel ? 'selected' : ''}>${esc(c.short || c.name)}</option>`).join('');
   box.hidden = false;
   box.innerHTML = `<div class="review-sum"><b>${S.review.items.length} item${S.review.items.length > 1 ? 's' : ''}.</b> ${esc(S.review.summary)}</div>` +
     S.review.items.map((it, i) => `<div class="rv" data-rv="${i}">
@@ -300,6 +297,14 @@ async function addReviewed() {
     if (!$('#rv-on-' + i).checked) continue;
     it.title = $('#rv-title-' + i).value.trim() || it.title;
     it.kind = $('#rv-kind-' + i).value; it.client = $('#rv-client-' + i).value;
+    if (it.client) {
+      const c = clientById(it.client);
+      if (c && c.biz) it.biz = c.biz;
+    }
+    if (it.kind === 'task') {
+      it.isFocus = true;
+      if (!it.due) it.due = today();
+    }
     it.due = $('#rv-due-' + i).value; it.time = $('#rv-time-' + i).value;
     it.priority = $('#rv-prio-' + i).value;
     const wantCal = $('#rv-cal-' + i).checked; delete it._cal;
@@ -312,10 +317,26 @@ async function addReviewed() {
 function quickTask() {
   const text = $('#dump').value.trim();
   if (!text) { toast('Type something first.'); return; }
-  const first = text.split('\n')[0].slice(0, 90);
-  saveItem(makeItem({ title: first, notes: text.length > first.length ? text : '' }));
+  const first = text.split('\n')[0].slice(0, 100);
+
+  const matched = typeof matchClientAndBizFromText === 'function' ? matchClientAndBizFromText(text) : { client: null, biz: null };
+  const clientObj = matched.client;
+  const bizObj = matched.biz;
+
+  const it = makeItem({
+    kind: 'task',
+    isFocus: true,
+    due: today(),
+    title: first,
+    client: clientObj ? clientObj.id : '',
+    biz: bizObj ? bizObj.id : (clientObj ? clientBiz(clientObj) : ''),
+    notes: text.length > first.length ? text : ''
+  });
+
+  saveItem(it);
   $('#dump').value = ''; lsSet('cmd.draft', '');
-  toast('Saved to Focus.');
+  const b = bizById(taskBiz(it));
+  toast(`Saved to Focus${b ? ' under ' + b.name : ''}.`);
 }
 
 /* ---- plan my day ---- */
@@ -365,9 +386,12 @@ function askLocally(q) {
   const dueToday = open.filter(i => i.due === t);
   const late = open.filter(isLate);
   const allPromises = open.filter(i => i.kind === 'promise');
-  const totalRev = S.items.filter(i => i.kind === 'payment' && i.status === 'done').reduce((s, i) => s + (i.amount || 0), 0);
-  const pendingRev = open.filter(i => i.kind === 'payment').reduce((s, i) => s + (i.amount || 0), 0);
-  const totalRetainers = clList.reduce((s, c) => s + (Number(c.retainer) || 0), 0);
+  const totalRev = S.items.filter(i => i.kind === 'payment' && i.status === 'done').reduce((s, i) => s + (paymentShare(i) || 0), 0);
+  const pendingRev = open.filter(i => i.kind === 'payment').reduce((s, i) => s + (paymentShare(i) || 0), 0);
+  const retClients = clList.filter(c => Number(c.retainer) > 0 && !c.oneTime);
+  const oneTimeClients = clList.filter(c => Number(c.oneTime) > 0);
+  const totalRetainers = retClients.reduce((s, c) => s + (clientShare(c) || 0), 0);
+  const totalOneTime = oneTimeClients.reduce((s, c) => s + (clientShare(c) || 0), 0);
 
   if (query.includes('today') || query.includes('doing') || query.includes('schedule') || query.includes('what to do') || query.includes('what\'s on')) {
     if (!dueToday.length && !late.length) {
@@ -402,10 +426,13 @@ function askLocally(q) {
   }
 
   if (query.includes('revenue') || query.includes('money') || query.includes('earn') || query.includes('payment') || query.includes('retainer') || query.includes('income')) {
-    let res = `Here's your financial overview:\n`;
-    res += `- **Total received revenue:** ${inr(totalRev)}\n`;
-    res += `- **Monthly retainers:** ${inr(totalRetainers)} / month across ${clList.length} client${clList.length === 1 ? '' : 's'}\n`;
-    if (pendingRev > 0) res += `- **Pending payments:** ${inr(pendingRev)}\n`;
+    let res = `Here's your financial overview (your individual share):\n`;
+    res += `- **Total received revenue (your share):** ${inr(totalRev)}\n`;
+    res += `- **Monthly retainers (your share):** ${inr(totalRetainers)} / month across ${retClients.length} recurring client${retClients.length === 1 ? '' : 's'}\n`;
+    if (oneTimeClients.length > 0) {
+      res += `- **One-time projects (your share):** ${inr(totalOneTime)} across ${oneTimeClients.length} project${oneTimeClients.length === 1 ? '' : 's'}\n`;
+    }
+    if (pendingRev > 0) res += `- **Pending payments (your share):** ${inr(pendingRev)}\n`;
     return res;
   }
 
@@ -414,7 +441,8 @@ function askLocally(q) {
     let res = `You have **${clList.length} client${clList.length > 1 ? 's' : ''}**:\n`;
     clList.forEach(c => {
       const rev = clientRevenue(c.id);
-      res += `- **${esc(c.name)}** (${starsOf(c)}★) — Retainer: ${c.retainer ? inr(c.retainer) : '—'}, Earned: ${inr(rev)}\n`;
+      const pricingStr = c.oneTime ? `One-Time: ${inr(c.oneTime)}` : `Retainer: ${c.retainer ? inr(c.retainer) + ' / mo' : '—'}`;
+      res += `- **${esc(c.name)}** (${starsOf(c)}★) — ${pricingStr}, Earned: ${inr(rev)}\n`;
     });
     return res;
   }
@@ -441,7 +469,7 @@ function askLocally(q) {
 
   const summaryDue = dueToday.length ? `${dueToday.length} due today` : 'nothing due today';
   const summaryLate = late.length ? `${late.length} overdue` : 'nothing overdue';
-  return `I'm Command, your personal command center assistant.\n\nCurrently you have **${open.length} open task${open.length !== 1 ? 's' : ''}** (${summaryDue}, ${summaryLate}), **${clList.length} active client${clList.length !== 1 ? 's' : ''}**, and **${inr(totalRetainers)}** in monthly retainers.\n\nAsk me about your **tasks for today**, **overdue items**, **clients**, or **revenue** anytime!`;
+  return `I'm Command, your personal command center assistant.\n\nCurrently you have **${open.length} open task${open.length !== 1 ? 's' : ''}** (${summaryDue}, ${summaryLate}), **${clList.length} active client${clList.length !== 1 ? 's' : ''}**, and **${inr(totalRetainers)} / mo** in monthly retainers${totalOneTime ? ` plus **${inr(totalOneTime)}** in one-time projects` : ''}.\n\nAsk me about your **tasks for today**, **overdue items**, **clients**, or **revenue** anytime!`;
 }
 
 let askCtl = null;
@@ -515,11 +543,54 @@ function renderInboxChat() {
     return;
   }
 
-  // Ensure active contact is not oneself and is valid
-  if (!S.inboxContactId || S.inboxContactId === myPid || !available.some(p => p.id === S.inboxContactId)) {
-    S.inboxContactId = available[0].id;
+  // If no contact is selected (or invalid), show the preview list of the 2 peers
+  const isPreviewMode = !S.inboxContactId || S.inboxContactId === myPid || !available.some(p => p.id === S.inboxContactId);
+
+  if (isPreviewMode) {
+    S.inboxContactId = null;
+    pane.innerHTML = `
+      <div class="inbox-chat-card inbox-preview-card" style="background:#111112!important;height:100%!important;border:none!important;">
+        <!-- HEADER: Inbox label + Close pane button -->
+        <div class="inbox-card-head" style="background:#111112!important;border:none!important;">
+          <div class="inbox-head-bar inbox-preview-head-bar" style="background:#111112!important;border:none!important;">
+            <div class="inbox-head-left">
+              <span class="inbox-unread-label" style="color:#ffffff!important;"><svg style="width:16px;height:16px;flex:none;color:#ffffff"><use href="#i-inbox"/></svg>Inbox</span>
+            </div>
+            <button type="button" class="inbox-back-btn" data-action="close-inbox-pane" aria-label="Close inbox" title="Hide inbox">
+              <svg><use href="#i-back"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- 2-PERSON PREVIEW LIST: No profile picture, no message snippet, just name + time + badge -->
+        <div class="inbox-preview-list-wrapper" style="background:#111112!important;padding:16px!important;">
+          <div class="inbox-preview-list" role="list">
+            ${available.map(p => {
+              const count = typeof getContactMessageCount === 'function' ? getContactMessageCount(myPid, p.id) : 0;
+              const timeStr = typeof getContactLastTime === 'function' ? getContactLastTime(myPid, p.id) : '';
+              return `
+                <button type="button" class="inbox-preview-row" data-opencontact="${p.id}" role="listitem" aria-label="Open chat with ${esc(p.name)}" style="background:#19191A!important;border:none!important;box-shadow:none!important;outline:none!important;display:flex!important;align-items:center!important;justify-content:space-between!important;width:100%!important;padding:16px 18px!important;border-radius:12px!important;cursor:pointer!important;text-align:left!important;">
+                  <div class="inbox-preview-main" style="display:flex!important;align-items:center!important;gap:12px!important;flex:1!important;min-width:0!important;">
+                    <span class="inbox-preview-name" style="color:#ffffff!important;font-size:14.5px!important;font-weight:500!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;">${esc(p.name)}</span>
+                  </div>
+                  <div class="inbox-preview-aside" style="display:flex!important;align-items:center!important;gap:12px!important;flex-shrink:0!important;">
+                    <span class="inbox-preview-time" style="color:#626266!important;font-size:12px!important;font-weight:400!important;white-space:nowrap!important;">${esc(timeStr)}</span>
+                    <span class="inbox-green-circle ${count > 0 ? '' : 'zero-unread'}" style="${count > 0 ? 'display:grid!important;place-items:center!important;width:20px!important;height:20px!important;min-width:20px!important;border-radius:50%!important;background:#ffffff!important;color:#111112!important;font-size:11px!important;font-weight:700!important;line-height:1!important;box-shadow:none!important;' : 'display:none!important;'}">${count > 0 ? count : ''}</span>
+                  </div>
+                </button>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+    return;
   }
+
   const contact = PROFILES.find(p => p.id === S.inboxContactId) || available[0];
+  if (contact && typeof markChatRead === 'function') {
+    markChatRead(myPid, contact.id);
+  }
 
   // Retrieve chat messages & shared tasks
   const rawMsgs = getChatMessages(myPid, contact.id).map(m => ({ ...m, isChatMsg: true }));
@@ -534,26 +605,18 @@ function renderInboxChat() {
 
   pane.innerHTML = `
     <div class="inbox-chat-card glass">
-      <!-- HEADER: Back button + Tabs & Contact Bar -->
+      <!-- HEADER: Back button to 2-person list + Partner Name + Close pane -->
       <div class="inbox-card-head">
-        <div class="inbox-head-bar">
-          <button type="button" class="inbox-back-btn" data-action="close-inbox-pane" aria-label="Close inbox" title="Hide inbox">
+        <div class="inbox-head-bar inbox-convo-head-bar">
+          <button type="button" class="inbox-back-btn" data-action="back-to-inbox-list" aria-label="Back to inbox" title="Back to inbox">
             <svg><use href="#i-back"/></svg>
           </button>
-          <div class="inbox-contact-tabs" role="tablist">
-            ${available.map(p => `
-              <button type="button" class="inbox-contact-tab ${p.id === contact.id ? 'active' : ''}" data-chattab="${p.id}" role="tab" aria-selected="${p.id === contact.id}">
-                <span class="tab-pfp">${p.avatarLetter}</span>
-                <span class="tab-name">${esc(p.name)}</span>
-              </button>
-            `).join('')}
-          </div>
-        </div>
-        <div class="inbox-active-partner">
-          <div class="partner-left">
-            <span class="partner-avatar">${contact.avatarLetter}</span>
+          <div class="inbox-chat-header-title">
             <b class="partner-name">${esc(contact.name)}</b>
           </div>
+          <button type="button" class="inbox-back-btn" data-action="close-inbox-pane" aria-label="Close inbox" title="Hide inbox">
+            <svg style="transform:scaleX(-1)"><use href="#i-back"/></svg>
+          </button>
         </div>
       </div>
 
@@ -628,4 +691,3 @@ function renderInboxChat() {
     feed.scrollTop = feed.scrollHeight;
   }
 }
-
