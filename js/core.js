@@ -43,6 +43,62 @@ const REEL_STAGES = [['idea', 'Idea'], ['shoot', 'Shoot'], ['edit', 'Edit'], ['p
 const PRIO_COLOR = { high: 'var(--ink)', med: 'var(--muted)', low: 'var(--faint)' };
 const FOCUS_CATEGORIES = ['Video Editing', 'Website', 'SEO', 'Automations', 'Other'];
 
+function isPromiseDaily(it) {
+  if (!it || it.kind !== 'promise') return false;
+  if (it.isDaily) return true;
+  const t = (it.title || '').toLowerCase();
+  return /\b(everyday|evryday|every\s+day|daily)\b/i.test(t);
+}
+
+function promiseStreak(it) {
+  if (!it || !isPromiseDaily(it)) return 0;
+  const dates = new Set(it.completedDates || []);
+  if (it.doneAt && it.status === 'done') {
+    dates.add(ymd(new Date(it.doneAt)));
+  }
+  const t = today();
+  let streak = 0;
+  let cur = dates.has(t) ? t : addDays(t, -1);
+  while (dates.has(cur)) {
+    streak++;
+    cur = addDays(cur, -1);
+  }
+  return streak;
+}
+
+function isPromiseDoneToday(it) {
+  if (!it) return false;
+  if (!isPromiseDaily(it)) return it.status === 'done';
+  const t = today();
+  if (Array.isArray(it.completedDates) && it.completedDates.includes(t)) return true;
+  if (it.status === 'done' && it.doneAt && ymd(new Date(it.doneAt)) === t) return true;
+  return false;
+}
+
+function promiseStreakBadge(it) {
+  if (!it || !isPromiseDaily(it)) return '';
+  const streak = promiseStreak(it);
+  const isDone = typeof isPromiseDoneToday === 'function' && isPromiseDoneToday(it);
+  return `<span class="streak-inline ${isDone ? 'is-done' : 'is-pending'}" title="${streak} day streak"><svg class="streak-fire" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-streak"/></svg><span class="streak-num">${streak}</span></span>`;
+}
+
+function syncDailyPromises() {
+  if (typeof S === 'undefined' || !S || !Array.isArray(S.items)) return;
+  const t = today();
+  S.items.forEach(it => {
+    if (it.kind === 'promise' && isPromiseDaily(it)) {
+      if (it.title && /^meditate\s+everyday\.?$/i.test(it.title.trim())) {
+        it.title = 'Meditate Everyday';
+      }
+      it.isDaily = true;
+      it.completedDates = Array.isArray(it.completedDates) ? it.completedDates : [];
+      const doneToday = isPromiseDoneToday(it);
+      it.status = doneToday ? 'done' : 'open';
+      it.streak = promiseStreak(it);
+    }
+  });
+}
+
 function toast(msg) {
   if (!msg) return;
   const t = $('#toast'); t.textContent = msg; t.hidden = false;
@@ -177,7 +233,8 @@ function defaultItemsFor(profileId) {
       { id: 'it-7', kind: 'task', title: 'Fix dark mode toggle flickering white on first load', client: '', person: '', due: '', time: '', priority: 'med', status: 'open', created: Date.now() - 60000000, biz: 'biz-larping', amount: 0, notes: '', cal: null },
       { id: 'it-8', kind: 'task', title: 'Fix video export failure on iOS Safari background tab', client: '', person: '', due: '', time: '', priority: 'med', status: 'done', doneAt: Date.now() - 10000000, created: Date.now() - 90000000, biz: 'biz-larping', amount: 0, notes: '', cal: null },
       { id: 'it-9', kind: 'reel', title: 'Day in the life running 3 businesses at 22', client: '', person: '', due: '', time: '', priority: 'med', status: 'open', created: Date.now() - 20000000, biz: 'biz-larping', amount: 0, notes: 'Behind-the-scenes B-roll showing Command', stage: 'shoot', link: '', cal: null },
-      { id: 'it-10', kind: 'reel', title: 'Why I stopped using frameworks and built my own command center', client: '', person: '', due: addDays(today(), -2), time: '14:00', priority: 'high', status: 'done', doneAt: Date.now() - 86400000, biz: 'biz-larping', amount: 0, notes: 'Posted to IG Reels', stage: 'posted', link: 'https://instagram.com/reel/example', cal: null }
+      { id: 'it-10', kind: 'reel', title: 'Why I stopped using frameworks and built my own command center', client: '', person: '', due: addDays(today(), -2), time: '14:00', priority: 'high', status: 'done', doneAt: Date.now() - 86400000, biz: 'biz-larping', amount: 0, notes: 'Posted to IG Reels', stage: 'posted', link: 'https://instagram.com/reel/example', cal: null },
+      { id: 'pr-meditate-daily', kind: 'promise', title: 'Meditate Everyday', person: 'Myself', client: '', due: today(), time: '', duration: 15, priority: 'high', amount: 0, notes: 'Daily meditation habit to stay calm, focused, and present.', status: 'open', created: Date.now() - 172800000, cal: null, isFocus: false, biz: '', stage: '', link: '', isDaily: true, completedDates: [addDays(today(), -2), addDays(today(), -1)], streak: 2 }
     ];
   }
   if (profileId === 'sri-chandana') {
@@ -420,10 +477,14 @@ function getProfileSettings(pid) {
   merged.clients = clients(pid);
 
   if (pid === 'sri-chandana') {
+    merged.name = 'Sri Chandana';
     merged.email = 'srichandana1026@gmail.com';
-  }
-  if (pid === 'adithya') {
+  } else if (pid === 'adithya') {
+    merged.name = 'Adithya';
     merged.email = 'gurrapuadithya10@gmail.com';
+  } else {
+    merged.name = 'Rahul';
+    merged.email = 'rahulchandrakondamu@gmail.com';
   }
   return merged;
 }
@@ -451,7 +512,7 @@ function getProfileItems(pid) {
   });
 
   def.forEach(d => {
-    if (d.kind === 'payment' && !delItems.has(d.id) && !filtered.some(f => f.id === d.id)) {
+    if ((d.kind === 'payment' || d.isDaily) && !delItems.has(d.id) && !filtered.some(f => f.id === d.id)) {
       filtered.push(d);
     }
   });
@@ -550,10 +611,6 @@ function signOutGoogle() {
 }
 
 function detectInitialProfile() {
-  const auth = getAuthUser();
-  if (auth && auth.profileId && PROFILES.some(x => x.id === auth.profileId)) {
-    return auth.profileId;
-  }
   try {
     const params = new URLSearchParams(window.location.search);
     const p = params.get('profile');
@@ -562,7 +619,15 @@ function detectInitialProfile() {
       return p;
     }
   } catch { }
-  return lsGet('cmd.active_profile', 'rahul');
+  const active = lsGet('cmd.active_profile', null);
+  if (active && PROFILES.some(x => x.id === active)) {
+    return active;
+  }
+  const auth = getAuthUser();
+  if (auth && auth.profileId && PROFILES.some(x => x.id === auth.profileId)) {
+    return auth.profileId;
+  }
+  return 'rahul';
 }
 
 function bootstrapStoreData() {
@@ -698,6 +763,15 @@ function switchProfile(pid, origin = null) {
     window.history.replaceState(null, '', url.toString());
   } catch { }
 
+  const authUser = {
+    email: p.email,
+    name: p.name,
+    avatarLetter: p.avatarLetter,
+    profileId: p.id,
+    signedInAt: Date.now()
+  };
+  setAuthUser(authUser);
+
   S.settings = getProfileSettings(pid);
   S.items = getProfileItems(pid);
   lsSet('cmd.settings', S.settings);
@@ -754,6 +828,38 @@ S = window.S = {
   review: null, plan: lsGet('cmd.plan', null), chat: [], mode: 'loading',
   history: getHistory()
 };
+
+// Seed default daily promise "Meditate everyday" if no daily promise exists
+if (!finalItems.some(i => i.isDaily || (i.kind === 'promise' && isPromiseDaily(i)))) {
+  const yesterday = addDays(today(), -1);
+  const dayBefore = addDays(today(), -2);
+  const sampleDaily = {
+    id: 'pr-meditate-daily',
+    kind: 'promise',
+    title: 'Meditate Everyday',
+    person: 'Myself',
+    client: '',
+    due: today(),
+    time: '',
+    duration: 15,
+    priority: 'high',
+    amount: 0,
+    notes: 'Daily meditation habit to stay calm, focused, and present.',
+    status: 'open',
+    created: parseYmd(dayBefore).getTime(),
+    cal: null,
+    isFocus: false,
+    biz: '',
+    stage: '',
+    link: '',
+    isDaily: true,
+    completedDates: [dayBefore, yesterday],
+    streak: 2
+  };
+  finalItems.unshift(sampleDaily);
+  lsSet(`cmd.items_${activeProfileId}`, finalItems);
+  lsSet('cmd.items', finalItems);
+}
 
 /* ================= Change History ================= */
 function getHistory() {
@@ -1029,10 +1135,10 @@ function pushAllToServer() {
 async function initStore() {
   bootstrapStoreData();
 
+  const currentPid = S.profileId || detectInitialProfile();
   let auth = getAuthUser();
-  if (!auth) {
-    const initialPid = S.profileId || detectInitialProfile();
-    const matched = PROFILES.find(p => p.id === initialPid) || PROFILES[0];
+  if (!auth || auth.profileId !== currentPid) {
+    const matched = PROFILES.find(p => p.id === currentPid) || PROFILES[0];
     auth = {
       email: matched.email,
       name: matched.name,
@@ -1089,8 +1195,8 @@ async function initStore() {
     S.mode = 'cloud';
   }
 
-  if (S.profileId !== auth.profileId) {
-    switchProfile(auth.profileId);
+  if (S.profileId !== currentPid) {
+    switchProfile(currentPid);
   }
 
   setSync(S.mode);
@@ -1282,13 +1388,17 @@ async function removeItem(id) {
 function makeItem(p) {
   const c = p.client ? clientById(p.client) : null;
   const resolvedBiz = p.biz || (c ? clientBiz(c) : '');
+  const isDaily = p.isDaily !== undefined ? !!p.isDaily : (p.kind === 'promise' && isPromiseDaily(p));
   return {
     id: newId(), kind: p.kind || 'task', title: (p.title || '').trim(), client: p.client || '', person: p.person || '',
     due: validDate(p.due) ? p.due : '', time: validTime(p.time) ? p.time : '', duration: Number(p.duration) || 60,
     priority: ['high', 'med', 'low'].includes(p.priority) ? p.priority : 'med', amount: Number(p.amount) || 0,
     notes: p.notes || '', status: 'open', created: Date.now(), cal: null,
     isFocus: p.isFocus !== undefined ? !!p.isFocus : (p.kind === 'task'),
-    biz: resolvedBiz, stage: p.stage || (p.kind === 'glitch' ? 'todo' : p.kind === 'reel' ? 'idea' : ''), link: p.link || ''
+    biz: resolvedBiz, stage: p.stage || (p.kind === 'glitch' ? 'todo' : p.kind === 'reel' ? 'idea' : ''), link: p.link || '',
+    isDaily: isDaily,
+    completedDates: Array.isArray(p.completedDates) ? p.completedDates : [],
+    streak: Number(p.streak) || 0
   };
 }
 const starSvg = '<svg viewBox="0 0 24 24"><path d="M12 2.8l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z"/></svg>';

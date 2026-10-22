@@ -1,5 +1,5 @@
 // Command PWA Service Worker
-const CACHE_NAME = 'command-pwa-v44';
+const CACHE_NAME = 'command-pwa-v47';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

@@ -17,7 +17,7 @@ function glitchRow(it) {
 }
 function renderLarp(b) {
   $('#clients-crumb').innerHTML = `<button class="link" data-back="all">Businesses</button> / <b>${esc(b.name)}</b>`;
-  $('#clients-title').textContent = b.name;
+  const ct = $('#clients-title'); if (ct) ct.textContent = b.name;
   setTopBtn('Plan a reel', 'new-reel');
 
   const larpTasks = S.items.filter(i => (i.biz === b.id || (!i.biz && i.category === 'LARPING')) && i.kind !== 'reel' && i.kind !== 'note' && i.kind !== 'payment');
@@ -121,7 +121,9 @@ function promiseRow(it) {
   const hasDue = validDate(it.due);
   const dueTxt = hasDue ? `${parseYmd(it.due).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}${it.time ? ', ' + fmtTime(it.time) : ''}` : '';
   const madeDate = it.created ? new Date(it.created).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '';
-  const kept = it.status === 'done' && it.doneAt ? new Date(it.doneAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) + ', ' + new Date(it.doneAt).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' }) : '';
+  const isDaily = typeof isPromiseDaily === 'function' && isPromiseDaily(it);
+  const isDone = isDaily ? (typeof isPromiseDoneToday === 'function' && isPromiseDoneToday(it)) : (it.status === 'done');
+  const kept = isDone && it.doneAt ? new Date(it.doneAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) + ', ' + new Date(it.doneAt).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' }) : '';
 
   const targetPerson = (it.person === 'Yourself' || it.person === 'yourself') ? 'Myself' : it.person;
   const recipient = (it.fromProfileId && it.fromProfileId !== (S.profileId || 'rahul'))
@@ -129,17 +131,21 @@ function promiseRow(it) {
     : (targetPerson ? `<span>To <b>${esc(targetPerson)}</b></span>` : '');
 
   const rowBits = [];
-  if (recipient) rowBits.push(recipient);
-  if (madeDate) rowBits.push(`<span class="faint">Promised on ${esc(madeDate)}</span>`);
-  if (c) rowBits.push(`<span>${esc(c.short || c.name)}</span>`);
+  if (!isDaily) {
+    if (recipient) rowBits.push(recipient);
+    if (madeDate) rowBits.push(`<span class="faint">Promised on ${esc(madeDate)}</span>`);
+    if (c) rowBits.push(`<span>${esc(c.short || c.name)}</span>`);
+  }
 
-  return `<div class="task ${it.status === 'done' ? 'done' : ''}" data-id="${it.id}">
-    <button class="check" data-toggle="${it.id}" aria-label="${it.status === 'done' ? 'Mark not kept' : 'Mark kept'}"><svg><use href="#i-check"/></svg></button>
+  const streakHtml = typeof promiseStreakBadge === 'function' ? promiseStreakBadge(it) : '';
+
+  return `<div class="task ${isDone ? 'done' : ''} ${isDaily ? 'task-daily' : ''}" data-id="${it.id}" data-daily="${isDaily ? '1' : '0'}">
+    <button class="check" data-toggle="${it.id}" aria-label="${isDone ? 'Mark not kept' : 'Mark kept'}"><svg><use href="#i-check"/></svg></button>
     <button class="body" data-edit="${it.id}">
-      <span class="ttl">${esc(it.title)}</span>
+      <span class="ttl ${isDaily ? 'daily-ttl' : ''}" style="${isDaily ? 'text-decoration:none !important;color:#FFFFFF !important;' : ''}">${esc(it.title)}${streakHtml}</span>
       ${rowBits.length ? `<span class="when">${rowBits.join('')}</span>` : ''}
-      ${hasDue ? `<span class="when"><span>Due <b>${esc(dueTxt)}</b></span>${it.status !== 'done' && d.text && d.text !== 'Today' ? `<span class="${d.cls === 'od' ? 'od' : 'faint'}" style="${d.cls === 'od' ? 'color:var(--ink);font-weight:600' : ''}">${esc(d.text)}</span>` : ''}</span>` : ''}
-      ${kept ? `<span class="when faint"><span>Kept ${esc(kept)}</span></span>` : ''}
+      ${!isDaily && hasDue ? `<span class="when"><span>Due <b>${esc(dueTxt)}</b></span>${it.status !== 'done' && d.text && d.text !== 'Today' ? `<span class="${d.cls === 'od' ? 'od' : 'faint'}" style="${d.cls === 'od' ? 'color:var(--ink);font-weight:600' : ''}">${esc(d.text)}</span>` : ''}</span>` : ''}
+      ${!isDaily && kept ? `<span class="when faint"><span>Kept ${esc(kept)}</span></span>` : ''}
     </button>
     <button class="more" data-edit="${it.id}" aria-label="Edit"><svg><use href="#i-dots"/></svg></button>
   </div>`;
@@ -203,15 +209,20 @@ async function savePromise() {
   const title = $('#pc-what').value.trim();
   if (!title) { toast('Write what you promised first.'); $('#pc-what').focus(); return; }
   const who = $('#pc-who').value.trim();
+  const isDailyCheckbox = $('#pc-daily') && $('#pc-daily').checked;
+  const isDaily = isDailyCheckbox || /\b(everyday|evryday|every\s+day|daily)\b/i.test(title);
   const it = makeItem({
     kind: 'promise',
     title,
-    person: who,
+    person: who || (isDaily ? 'Myself' : ''),
     client: $('#pc-client').value,
-    due: PC.date,
+    due: isDaily ? (PC.date || today()) : PC.date,
     time: PC.time,
     priority: 'high',
-    fromProfileId: S.profileId || 'rahul'
+    fromProfileId: S.profileId || 'rahul',
+    isDaily: isDaily,
+    completedDates: [],
+    streak: 0
   });
   $('#pc-state').textContent = 'Saving…';
   await saveItem(it);
@@ -233,9 +244,10 @@ async function savePromise() {
   let cal = false;
   if ($('#pc-cal').checked && it.due) cal = await pushToCalendar(it, true);
   $('#pc-what').value = ''; $('#pc-who').value = ''; PC.date = ''; PC.time = ''; $('#pc-state').textContent = '';
+  if ($('#pc-daily')) $('#pc-daily').checked = false;
   renderComposer();
   updateInboxPip();
-  toast(`Promise saved${cal ? ' and added to Google Calendar' : it.due ? '' : '. Add a date so it can remind you'}.`);
+  toast(isDaily ? `Daily promise created! Keep the streak going 🔥` : `Promise saved${cal ? ' and added to Google Calendar' : it.due ? '' : '. Add a date so it can remind you'}.`);
 }
 
 function focusTaskRow(it) {
@@ -307,13 +319,14 @@ function renderWordFocusList() {
 }
 
 function renderWord() {
+  if (typeof syncDailyPromises === 'function') syncDailyPromises();
   renderComposer();
   renderWordFocusList();
 
   const ps = S.items.filter(i => i.kind === 'promise');
-  const open = sortItems(ps.filter(i => i.status !== 'done'));
+  const open = sortItems(ps.filter(i => typeof isPromiseDoneToday === 'function' ? !isPromiseDoneToday(i) : i.status !== 'done'));
   $('#word-list').innerHTML = open.length ? open.map(promiseRow).join('') : `<div class="empty">No open promises. When you tell someone "I'll do it", add it here.</div>`;
-  const done = ps.filter(i => i.status === 'done').sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0)).slice(0, 20);
+  const done = ps.filter(i => typeof isPromiseDoneToday === 'function' ? isPromiseDoneToday(i) : i.status === 'done').sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0)).slice(0, 20);
   $('#word-done').innerHTML = done.length ? done.map(promiseRow).join('') : `<div class="empty">Kept promises show up here.</div>`;
   updateInboxPip();
 }

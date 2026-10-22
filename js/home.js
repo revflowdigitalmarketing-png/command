@@ -3,6 +3,8 @@
 let raf = 0;
 function render() { cancelAnimationFrame(raf); raf = requestAnimationFrame(renderNow); }
 function renderNow() {
+  if (typeof updateProfileCrumbs === 'function') updateProfileCrumbs();
+  if (typeof syncDailyPromises === 'function') syncDailyPromises();
   $$('[data-go]').forEach(b => {
     if (b.classList.contains('nav-btn') || b.classList.contains('tab')) {
       b.setAttribute('aria-current', b.dataset.go === S.view ? 'page' : 'false');
@@ -68,34 +70,40 @@ function taskRow(it, opts = {}) {
       }
     }
   } else {
-    if (opts.showClient !== false && c) bits.push(`<span><span class="chip"><span class="sw" style="background:${clientColor(c)}"></span>${esc(c.short || c.name)}</span></span>`);
-    if (it.kind !== 'task') {
-      if (it.kind === 'promise') {
-        const isIncoming = it.fromProfileId && it.fromProfileId !== (S.profileId || 'rahul');
-        if (isIncoming) {
-          bits.push(`<span><span class="chip" style="font-weight:600;background:var(--surface-3);color:var(--ink);padding:1px 6px">From ${esc(profileName(it.fromProfileId))}</span></span>`);
+    const isDaily = (typeof isPromiseDaily === 'function' && isPromiseDaily(it));
+    if (!isDaily) {
+      if (opts.showClient !== false && c) bits.push(`<span><span class="chip"><span class="sw" style="background:${clientColor(c)}"></span>${esc(c.short || c.name)}</span></span>`);
+      if (it.kind !== 'task') {
+        if (it.kind === 'promise') {
+          const isIncoming = it.fromProfileId && it.fromProfileId !== (S.profileId || 'rahul');
+          if (isIncoming) {
+            bits.push(`<span><span class="chip" style="font-weight:600;background:var(--surface-3);color:var(--ink);padding:1px 6px">From ${esc(profileName(it.fromProfileId))}</span></span>`);
+          } else {
+            bits.push(`<span>Promise${it.person ? ' to ' + esc(it.person) : ''}</span>`);
+          }
         } else {
-          bits.push(`<span>Promise${it.person ? ' to ' + esc(it.person) : ''}</span>`);
+          bits.push(`<span>${KIND_LABEL[it.kind] || ''}${it.person ? ' · ' + esc(it.person) : ''}</span>`);
         }
-      } else {
-        bits.push(`<span>${KIND_LABEL[it.kind] || ''}${it.person ? ' · ' + esc(it.person) : ''}</span>`);
       }
-    }
-    if (it.status === 'done' && it.doneAt) bits.push(`<span>Done</span>`);
-    else if (d.text && d.cls !== 'od' && !d.text.includes('late')) {
-      if (hideToday && d.text === 'Today') {
-        // Do not display 'Today' or time below tasks on homepage
-      } else {
-        bits.push(`<span class="${d.cls}"><svg><use href="#i-clock"/></svg> ${d.text}${it.time ? ', ' + fmtTime(it.time) : ''}</span>`);
+      if (it.status === 'done' && it.doneAt) bits.push(`<span>Done</span>`);
+      else if (d.text && d.cls !== 'od' && !d.text.includes('late')) {
+        if (hideToday && d.text === 'Today') {
+          // Do not display 'Today' or time below tasks on homepage
+        } else {
+          bits.push(`<span class="${d.cls}"><svg><use href="#i-clock"/></svg> ${d.text}${it.time ? ', ' + fmtTime(it.time) : ''}</span>`);
+        }
       }
+      if (it.cal) bits.push(`<span title="On Google Calendar"><svg><use href="#i-cal"/></svg></span>`);
     }
-    if (it.cal) bits.push(`<span title="On Google Calendar"><svg><use href="#i-cal"/></svg></span>`);
   }
-  return `<div class="task ${it.status === 'done' ? 'done' : ''}" data-id="${it.id}">
-    <button class="check" data-toggle="${it.id}" aria-label="${it.status === 'done' ? 'Mark not done' : 'Mark done'}"><svg><use href="#i-check"/></svg></button>
+  const isDaily = (typeof isPromiseDaily === 'function' && isPromiseDaily(it));
+  const isDone = isDaily ? (typeof isPromiseDoneToday === 'function' && isPromiseDoneToday(it)) : (it.status === 'done');
+  const streakHtml = typeof promiseStreakBadge === 'function' ? promiseStreakBadge(it) : '';
+  return `<div class="task ${isDone ? 'done' : ''} ${isDaily ? 'task-daily' : ''}" data-id="${it.id}" data-daily="${isDaily ? '1' : '0'}">
+    <button class="check" data-toggle="${it.id}" aria-label="${isDone ? 'Mark not done' : 'Mark done'}"><svg><use href="#i-check"/></svg></button>
     <span class="stripe" style="background:${c ? clientColor(c) : PRIO_COLOR[it.priority]}"></span>
     <button class="body" data-edit="${it.id}">
-      <span class="ttl" style="font-weight:400">${balanceTitleText(it.title)}</span>
+      <span class="ttl ${isDaily ? 'daily-ttl' : ''}" style="font-weight:400;${isDaily ? 'text-decoration:none !important;color:#FFFFFF !important;' : ''}">${balanceTitleText(it.title)}${streakHtml}</span>
       ${bits.length ? `<span class="sub">${bits.join('')}</span>` : ''}
     </button>
     <button class="more" data-edit="${it.id}" aria-label="Edit"><svg><use href="#i-dots"/></svg></button>
@@ -138,7 +146,7 @@ function renderHome() {
   const pid = S.profileId || 'rahul';
   const nm = S.settings.name || (pid === 'sri-chandana' ? 'Sri Chandana' : pid === 'adithya' ? 'Adithya' : 'Rahul');
   updateProfileCrumbs();
-  $('#greet').textContent = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
+  const greetEl = $('#greet'); if (greetEl) greetEl.textContent = '';
 
   // Tailored 2-line greetings per profile
   let greetingHtml = '';
@@ -223,7 +231,11 @@ function renderHome() {
   // My Word mini list on Home
   const wm = $('#word-mini');
   if (wm) {
-    const pr = sortItems(open.filter(i => i.kind === 'promise')).slice(0, 3);
+    if (typeof syncDailyPromises === 'function') syncDailyPromises();
+    const ps = S.items.filter(i => i.kind === 'promise');
+    const openPs = sortItems(ps.filter(i => typeof isPromiseDoneToday === 'function' ? !isPromiseDoneToday(i) : i.status !== 'done'));
+    const dailyDone = ps.filter(i => (typeof isPromiseDaily === 'function' && isPromiseDaily(i)) && (typeof isPromiseDoneToday === 'function' && isPromiseDoneToday(i)));
+    const pr = [...openPs, ...dailyDone].slice(0, 4);
     wm.innerHTML = pr.length ? pr.map(i => taskRow(i)).join('') : `<div class="empty">No open promises. Add one when you give someone your word.</div>`;
   }
 
@@ -243,19 +255,16 @@ function weekDays(offset) {
   return Array.from({ length: 7 }, (_, i) => addDays(mon, i));
 }
 function clientCard(c) {
-  const open = openItems().filter(i => i.client === c.id && i.kind !== 'note');
-  const late = open.filter(isLate).length;
-  const next = sortItems(open.filter(i => validDate(i.due)))[0];
-  const papers = open.length ? `<span class="f-paper p1"></span>${open.length > 1 ? '<span class="f-paper p2"></span>' : ''}` : '';
+  const papers = `<span class="f-paper p1"></span><span class="f-paper p2"></span>`;
   const priceLabel = c.retainer
     ? `${inr(c.retainer)} / mo`
     : (c.oneTime ? inr(c.oneTime) : '');
-  const sub = `${open.length} open${late ? ` · ${late} late` : next ? ' · ' + dueLabel(next.due).text : ''}${priceLabel ? ` · ${priceLabel}` : ''}`;
+  const sub = priceLabel;
   const frontStyle = c.cover ? `background:linear-gradient(rgba(0,0,0,0.3),rgba(0,0,0,0.7)),url('${esc(c.cover)}') center/cover;color:#fff;` : '';
   return `<button class="folder-card" data-client="${c.id}">
-    <span class="folder" aria-hidden="true"><span class="f-back"></span>${papers}<span class="f-front" style="${frontStyle}"><span class="f-badges"><span class="f-chip">★ ${starsOf(c).toFixed(1)}</span>${late ? `<span class="f-chip late">${late} late</span>` : ''}</span></span></span>
+    <span class="folder" aria-hidden="true"><span class="f-back"></span>${papers}<span class="f-front" style="${frontStyle}"><span class="f-badges"><span class="f-chip">★ ${starsOf(c).toFixed(1)}</span></span></span></span>
     <span class="f-name">${esc(c.short || c.name)}</span>
-    <span class="f-sub">${esc(sub)}</span>
+    ${sub ? `<span class="f-sub">${esc(sub)}</span>` : ''}
   </button>`;
 }
 
@@ -272,8 +281,8 @@ function renderDay(scope) {
   if (!$(ids.strip)) return;
   const t = today();
   const days = Array.from({ length: 7 }, (_, i) => addDays(t, i));
-  if (!days.includes(S[ids.key])) S[ids.key] = t;
-  const sel = S[ids.key];
+  S[ids.key] = t;
+  const sel = t;
   const evAll = c ? S.events.filter(e => clientMatchesEvent(c, e)) : S.events;
   const itAll = openItems().filter(i => i.kind !== 'note' && i.kind !== 'reel' && i.kind !== 'glitch' && (!c || i.client === c.id));
   $(ids.strip).innerHTML = days.map(d => {
@@ -446,10 +455,9 @@ function renderWeekStrip() {
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
   const oneLetters = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
-  if (!S.selectedWeekDay || !weekDays.includes(S.selectedWeekDay)) {
-    S.selectedWeekDay = t;
-  }
-  const sel = S.selectedWeekDay;
+  // Dates are not changeable as of now - lock selection to today
+  S.selectedWeekDay = t;
+  const sel = t;
 
   // Calendar events data
   const evAll = S.events || [];
@@ -468,11 +476,11 @@ function renderWeekStrip() {
     const hasEvent = hasCalEv || hasCalTask;
 
     return `
-      <button type="button" class="week-strip-day ${isToday ? 'today' : ''} ${isSel ? 'selected' : ''}" data-wday="${d}" aria-label="${letter} ${dateNum} ${isToday ? '(Today)' : ''}" aria-pressed="${isSel}">
+      <div class="week-strip-day ${isToday ? 'today' : ''} ${isSel ? 'selected' : ''}" data-wday="${d}" aria-label="${letter} ${dateNum} ${isToday ? '(Today)' : ''}" aria-pressed="${isSel}">
         <span class="week-strip-letter">${letter}</span>
         <span class="week-strip-num">${dateNum}</span>
         <span class="week-strip-dot ${hasEvent ? 'has-event' : ''}"></span>
-      </button>
+      </div>
     `;
   }).join('');
 

@@ -151,6 +151,10 @@
       <circle cx="8.5" cy="8.5" r="1.5" />
       <polyline points="21 15 16 10 5 21" />
     </symbol>
+    <symbol id="i-streak" viewBox="0 0 24 24" fill="currentColor">
+      <path fill-rule="evenodd" clip-rule="evenodd"
+        d="M12.963 2.286a.75.75 0 0 0-1.071-.136 9.742 9.742 0 0 0-3.539 6.176 7.547 7.547 0 0 1-1.705-1.715.75.75 0 0 0-1.152-.082A9 9 0 1 0 15.68 4.534a7.46 7.46 0 0 1-2.717-2.248ZM15.75 14.25a3.75 3.75 0 1 1-7.313-1.172c.628.465 1.35.81 2.133 1a5.99 5.99 0 0 1 1.925-3.546 3.75 3.75 0 0 1 3.255 3.718Z" />
+    </symbol>
   </svg>
 
   <div class="app">
@@ -196,7 +200,6 @@
         <div class="topbar home-topbar">
           <div class="grow">
             <div class="crumb">Rahul / <b>Home</b></div>
-            <div class="faint" id="greet" style="font-size:12.5px;margin-top:2px"></div>
           </div>
           <div class="week-strip-wrap">
             <div class="week-strip-card" id="home-week-strip">
@@ -285,7 +288,6 @@
         <div class="topbar">
           <div class="grow">
             <div class="crumb" id="clients-crumb">Rahul / <b>Businesses</b></div>
-            <h1 class="page-title" id="clients-title">Businesses</h1>
           </div>
           <button class="icon-btn" data-go="ask" aria-label="Ask & Chat"><svg>
               <use href="#i-spark" />
@@ -363,7 +365,6 @@
         <div class="topbar">
           <div class="grow">
             <div class="crumb" id="word-crumb">Rahul / <b>My Word</b></div>
-            <h1 class="page-title">Promises & Focus</h1>
           </div>
           <button class="icon-btn" data-go="ask" aria-label="Ask & Chat"><svg>
               <use href="#i-spark" />
@@ -400,6 +401,7 @@
                 <option value="Chandana">Chandana</option>
               </select>
               <select class="pc-in" id="pc-client" aria-label="Client"></select>
+              <label class="tog" title="Repeat every day and track daily streak"><input type="checkbox" id="pc-daily">Every day</label>
               <label class="tog"><input type="checkbox" id="pc-cal" checked>Add to Calendar</label>
               <span class="state" id="pc-state"></span>
               <button type="submit" class="send" aria-label="Save promise"><svg>
@@ -459,7 +461,6 @@
         <div class="topbar">
           <div class="grow">
             <div class="crumb">Rahul / <b>Money</b></div>
-            <h1 class="page-title">Money</h1>
           </div>
           <button class="icon-btn" data-go="ask" aria-label="Ask & Chat"><svg>
               <use href="#i-spark" />
@@ -511,7 +512,6 @@
         <div class="topbar">
           <div class="grow">
             <div class="crumb" id="crushers-crumb">Rahul / <b>Goal Crushers</b></div>
-            <h1 class="page-title">Goal Crushers</h1>
           </div>
           <button class="icon-btn" data-go="ask" aria-label="Ask & Chat"><svg>
               <use href="#i-spark" />
@@ -525,7 +525,6 @@
         <div class="topbar">
           <div class="grow">
             <div class="crumb" id="ask-crumb">Rahul / <b>Ask</b></div>
-            <h1 class="page-title">Ask & Chat</h1>
           </div>
           <div class="ask-topbar-actions">
             <button class="btn small ask-pane-btn" id="notif-open-btn" data-action="toggle-notif-pane" aria-label="Notifications" title="Notifications">
@@ -598,18 +597,18 @@
   <div class="toast" id="toast" hidden></div>
   <div id="world-portal" class="world-portal" hidden aria-hidden="true"></div>
 
-  <script src="js/seed-data.js?v=44"></script>
-  <script src="js/core.js?v=44"></script>
-  <script src="js/home.js?v=44"></script>
-  <script src="js/businesses.js?v=44"></script>
-  <script src="js/word-larping.js?v=44"></script>
-  <script src="js/money.js?v=44"></script>
-  <script src="js/calendar.js?v=44"></script>
-  <script src="js/ai.js?v=44"></script>
-  <script src="js/crushers.js?v=44"></script>
-  <script src="js/sheets.js?v=44"></script>
-  <script src="js/notifications.js?v=44"></script>
-  <script src="js/events.js?v=44"></script>
+  <script src="js/seed-data.js?v=47"></script>
+  <script src="js/core.js?v=47"></script>
+  <script src="js/home.js?v=47"></script>
+  <script src="js/businesses.js?v=47"></script>
+  <script src="js/word-larping.js?v=47"></script>
+  <script src="js/money.js?v=47"></script>
+  <script src="js/calendar.js?v=47"></script>
+  <script src="js/ai.js?v=47"></script>
+  <script src="js/crushers.js?v=47"></script>
+  <script src="js/sheets.js?v=47"></script>
+  <script src="js/notifications.js?v=47"></script>
+  <script src="js/events.js?v=47"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {

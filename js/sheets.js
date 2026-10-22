@@ -57,6 +57,10 @@ function editItem(id, preset) {
       <div class="field"><label for="f-person">${it.kind === 'payment' ? 'Payer / Rep' : 'Promised to'}</label><input class="in" id="f-person" value="${esc(it.person)}" placeholder="Person's name"></div>
       <div class="field"><label for="f-amount">${it.kind === 'payment' ? 'Amount Received (₹)' : 'Amount (₹)'}</label><input class="in mono" type="number" inputmode="numeric" id="f-amount" value="${it.amount || ''}" placeholder="0"></div>
     </div>
+    ${it.kind === 'promise' ? `
+    <div class="frow" style="margin-top:2px;margin-bottom:8px">
+      <label class="tog" style="font-size:13px"><input type="checkbox" id="f-daily" ${it.isDaily ? 'checked' : ''}>Every day habit (daily streak)</label>
+    </div>` : ''}
     ${it.kind === 'payment' ? `
     <div class="frow">
       <div class="field"><label for="f-tot">Total Retainer (₹)</label><input class="in mono" type="number" inputmode="numeric" id="f-tot" value="${it.totalRetainer || ''}" placeholder="50000"></div>
@@ -76,6 +80,12 @@ function editItem(id, preset) {
       it.person = $('#f-person').value.trim(); it.amount = Number($('#f-amount').value) || 0; it.notes = $('#f-notes').value;
       if ($('#f-tot')) it.totalRetainer = Number($('#f-tot').value) || 0;
       if ($('#f-share')) it.yourShare = Number($('#f-share').value) || 0;
+      if ($('#f-daily')) {
+        it.isDaily = $('#f-daily').checked;
+        if (it.isDaily && !Array.isArray(it.completedDates)) it.completedDates = [];
+      } else if (it.kind === 'promise' && typeof isPromiseDaily === 'function') {
+        it.isDaily = isPromiseDaily(it);
+      }
       return !!it.title;
     };
     sh.querySelector('#f-save').onclick = async () => { if (!collect()) { toast('Add a title first.'); return; } closeSheet(); await saveItem(it); };

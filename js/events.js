@@ -63,6 +63,48 @@ document.addEventListener('click', e => {
   if (d.toggle) {
     const it = S.items.find(x => x.id === d.toggle);
     if (it) {
+      if (it.kind === 'promise' && typeof isPromiseDaily === 'function' && isPromiseDaily(it)) {
+        it.isDaily = true;
+        it.completedDates = Array.isArray(it.completedDates) ? it.completedDates : [];
+        const t = today();
+        const isDone = it.completedDates.includes(t);
+        if (isDone) {
+          it.completedDates = it.completedDates.filter(x => x !== t);
+          it.status = 'open';
+          it.doneAt = it.completedDates.length ? parseYmd(it.completedDates[it.completedDates.length - 1]).getTime() : null;
+          it.streak = promiseStreak(it);
+          saveItem(it);
+          if (typeof recordHistory === 'function') {
+            recordHistory({
+              action: 'reopen',
+              category: 'promise',
+              title: it.title,
+              details: 'Reopened daily habit for today',
+              profileId: S.profileId
+            });
+          }
+          toast('Promise reopened for today.');
+        } else {
+          it.completedDates.push(t);
+          it.completedDates.sort();
+          it.status = 'done';
+          it.doneAt = Date.now();
+          it.streak = promiseStreak(it);
+          saveItem(it);
+          if (typeof recordHistory === 'function') {
+            recordHistory({
+              action: 'complete',
+              category: 'promise',
+              title: it.title,
+              details: `Kept daily promise! Streak: ${it.streak} days`,
+              profileId: S.profileId
+            });
+          }
+          toast(`Promise kept! 🔥 ${it.streak} ${it.streak === 1 ? 'day' : 'days'} streak`);
+        }
+        renderNow();
+        return;
+      }
       it.status = it.status === 'done' ? 'open' : 'done';
       it.doneAt = it.status === 'done' ? Date.now() : null;
       if (it.kind === 'glitch') it.stage = it.status === 'done' ? 'fixed' : 'todo';
@@ -163,8 +205,8 @@ document.addEventListener('click', e => {
   if (d.editclient) { editClient(d.editclient); return; }
   if (d.logpay !== undefined) { logPayment(d.logpay); return; }
   if (d.goal) { editGoal(d.goal); return; }
-  if (d.day) { if (d.scope) { S.cday = d.day; renderDay(d.scope); } else { S.day = d.day; renderDay(); } return; }
-  if (d.wday) { S.selectedWeekDay = d.wday; if (typeof renderWeekStrip === 'function') renderWeekStrip(); return; }
+  if (d.day) { /* Dates are not changeable as of now */ return; }
+  if (d.wday) { /* Dates are not changeable as of now */ return; }
   if (d.wishtoggle) {
     const w = (S.settings.wishlist || []).find(x => x.id === d.wishtoggle);
     if (w) {

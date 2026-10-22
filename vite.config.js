@@ -354,6 +354,13 @@ export default defineConfig({
   plugins: [dashboardStorePlugin(), distCopyPlugin()],
   server: {
     port: 5173,
+    host: true,
+    watch: {
+      ignored: ['**/data/**', '**/public/data/**', '**/js/seed-data.js']
+    }
+  },
+  preview: {
+    port: 5173,
     host: true
   }
 });

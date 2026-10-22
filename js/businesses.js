@@ -14,7 +14,7 @@ function renderClients() {
   if (!b) {
     S.client = null;
     $('#clients-crumb').innerHTML = `${esc(S.settings.name || 'Rahul')} / <b>Businesses</b>`;
-    $('#clients-title').textContent = 'Businesses';
+    const ct = $('#clients-title'); if (ct) ct.textContent = 'Businesses';
     setTopBtn('Manage businesses', 'manage-businesses');
     $('#biz-list').innerHTML = businesses().length ? businesses().map(mainFolder).join('') : `<div class="empty">No businesses yet. Tap "Manage businesses".</div>`;
     return;
@@ -22,7 +22,7 @@ function renderClients() {
   if (b.kind === 'product') { renderLarp(b); return; }
   if (!c) {
     $('#clients-crumb').innerHTML = `<button class="link" data-back="all">${esc(S.settings.name || 'Rahul')}</button> / <b>${esc(b.name)}</b>`;
-    $('#clients-title').textContent = b.name;
+    const ct = $('#clients-title'); if (ct) ct.textContent = b.name;
     setTopBtn('Manage clients', 'manage-clients');
     const cl = bizClients(b.id);
     const open = openItems().filter(i => cl.some(x => x.id === i.client) && i.kind !== 'note');
@@ -63,7 +63,7 @@ function renderClients() {
   }
   setTopBtn('Manage clients', 'manage-clients');
   $('#clients-crumb').innerHTML = `<button class="link" data-back="all">${esc(S.settings.name || 'Rahul')}</button> / <button class="link" data-back="biz">${esc(b.name)}</button> / <b>${esc(c.short || c.name)}</b>`;
-  $('#clients-title').textContent = c.name;
+  const ct = $('#clients-title'); if (ct) ct.textContent = c.name;
   const mine = S.items.filter(i => i.client === c.id);
   const open = mine.filter(i => i.status !== 'done' && i.kind !== 'note');
   const pending = mine.filter(i => i.kind === 'payment' && i.status !== 'done').reduce((s, i) => s + (i.amount || 0), 0);
